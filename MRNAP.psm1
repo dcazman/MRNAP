@@ -5,7 +5,7 @@
   Additionally -move will move out files of similar reportname to a nested directory example of default is
   C:\Reports\Old
 
-.PARAMETER
+.PARAMETER ReportName
   -ReportName parameter is required to run this function.
   -ReportName (name of report)
 
@@ -20,6 +20,7 @@
   -NoSeperators makes the file name without any dashs.
   -Move checks if simlar files with the reportname exist in the directory and if so moves out the similar files to a nested old 
    directory
+
 .NOTES
   The point of this function is to generate unique report names. If you do a logging script this will help make a readable
   name and move old files out of the directory.
@@ -42,7 +43,7 @@
 Function MRNAP {
     [alias("MoldReportNameAndPath")]
     param(
-        [parameter(Mandatory = $True)][string]$ReportName,
+        [parameter(Position = 0, Mandatory = $True)][string]$ReportName,
         [parameter(Mandatory = $False)][string]$DirectoryName = "Reports",
         [parameter(Mandatory = $False)][string]$Extension = ".csv",
         [parameter(Mandatory = $False)][switch]$UTC,
@@ -84,7 +85,7 @@ Function MRNAP {
 
     # Just The Date Section
     if ($JustDate -and $null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMdd"
 
         }
@@ -102,7 +103,7 @@ Function MRNAP {
 
     #No seconds section
     If ($NoSeconds -and $null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMddThhmm"
 
         }
@@ -120,7 +121,7 @@ Function MRNAP {
 
     # Default section
     If ($null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMddThhmmss"
 
         }
