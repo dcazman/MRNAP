@@ -85,7 +85,7 @@ Function MRNAP {
 
     # Just The Date Section
     if ($JustDate -and $null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMdd"
 
         }
@@ -103,7 +103,7 @@ Function MRNAP {
 
     #No seconds section
     If ($NoSeconds -and $null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMddThhmm"
 
         }
@@ -121,7 +121,7 @@ Function MRNAP {
 
     # Default section
     If ($null -eq $fullPath) {
-        If ($NoSeperator) {
+        If ($NoSeperators) {
             $Dash = "yyyyMMddThhmmss"
 
         }
