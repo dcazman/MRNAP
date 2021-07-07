@@ -30,7 +30,7 @@ CompanyName = 'Unknown'
 Copyright = '(c) Dan Casmas. All rights reserved.'
 
 # Description of the functionality provided by this module
-Description = 'Molds File Name And Path.'
+Description = 'Molds Report Name And Path.'
 
 # Minimum version of the PowerShell engine required by this module
 # PowerShellVersion = ''
