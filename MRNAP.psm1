@@ -63,9 +63,15 @@ Function MRNAP {
         }
     }
 
+    # This mini function is courtesy of the https://stackoverflow.com/ community
+    # Because Join-Path won't work with drive letters that don't exist
+    function Join-AnyPath {
+        Return ($Args -join '\') -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
+    }
+
     #Test for C:\ or nothing. Skip if :\ 
     If (!($DirectoryName -like ('?:\*'))) {
-        $DirectoryName = join-path -path 'c:\' -childpath $DirectoryName
+        $DirectoryName = Join-AnyPath 'c:\' $DirectoryName
     }
 
     $ReportNameExt = "$ReportName" + "$Extension"
@@ -73,14 +79,7 @@ Function MRNAP {
 
     #FlatName Section
     If ($NoDateTimeSeconds) {
-        $fullPath = $DirectoryName = $DirectoryName + '\' + ($ReportNameExt)
-    }
-    Else {
-        # This mini function is courtesy of the https://stackoverflow.com/ community
-        # Because Join-Path won't work with drive letters that don't exist
-        function Join-AnyPath {
-            Return ($Args -join '\') -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
-        }
+        $fullPath = Join-AnyPath $DirectoryName $ReportNameExt
     }
 
     # Just The Date Section
@@ -140,19 +139,37 @@ Function MRNAP {
     #===============Move section. This moves out files like the reportname into an old directory
     If ($Move) {
         If (!(test-path $DirectoryName)) {
-            New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+            Try {
+                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+            }
+            Catch {
+                Return $fullPath
+                break script
+            }
             Return $fullPath
             break script
         }
    
         $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + ($ReportNameExt)) -file -ErrorAction SilentlyContinue
         If ($MoveTest) {
-            $DirectoryNameOld = Join-AnyPath $DirectoryName -ChildPath 'old'
+            $DirectoryNameOld = $DirectoryName + 'old'
             If (!(Test-Path $DirectoryNameOld)) {
-                New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                Try {
+                    New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                }
+                Catch {
+                    Return $fullPath
+                    break script
+                }
             }
            
-            Move-Item -Path ($DirectoryName + '\*' + ($ReportNameExt)) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
+            Try {
+                Move-Item -Path ($DirectoryName + '\*' + ($ReportNameExt)) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
+            }
+            Catch {
+                Return $fullPath
+                break script
+            }
         }
     }
    
