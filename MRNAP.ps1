@@ -150,9 +150,9 @@ Function MRNAP {
             break script
         }
    
-        $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + ($ReportNameExt)) -file -ErrorAction SilentlyContinue
+        $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
         If ($MoveTest) {
-            $DirectoryNameOld = $DirectoryName + 'old'
+            $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
             If (!(Test-Path $DirectoryNameOld)) {
                 Try {
                     New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
@@ -164,7 +164,7 @@ Function MRNAP {
             }
            
             Try {
-                Move-Item -Path ($DirectoryName + '\*' + ($ReportNameExt)) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
+                Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
                 Return $fullPath
