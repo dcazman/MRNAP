@@ -43,7 +43,7 @@
 Function MRNAP {
     [alias("MoldReportNameAndPath")]
     param(
-        [parameter(Position = 0, Mandatory = $True)][string]$ReportName,
+        [parameter(Mandatory = $True)][string]$ReportName,
         [parameter(Mandatory = $False)][string]$DirectoryName = "Reports",
         [parameter(Mandatory = $False)][string]$Extension = ".csv",
         [parameter(Mandatory = $False)][switch]$UTC,
@@ -144,10 +144,8 @@ Function MRNAP {
             }
             Catch {
                 Return $fullPath
-                break script
             }
             Return $fullPath
-            break script
         }
    
         $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
@@ -159,7 +157,6 @@ Function MRNAP {
                 }
                 Catch {
                     Return $fullPath
-                    break script
                 }
             }
            
@@ -168,7 +165,6 @@ Function MRNAP {
             }
             Catch {
                 Return $fullPath
-                break script
             }
         }
     }
