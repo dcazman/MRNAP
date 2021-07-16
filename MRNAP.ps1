@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Molds a file name along with a path. Options include no date and time, no seconds with date and time, utc time.
+  Molds Report Name And Path. Options include no date and time, no seconds with date and time, utc time.
   Extension is default csv and the default directory is C:\Reports.
   Additionally -move will move out files of similar reportname to a nested directory example of default is
   C:\Reports\Old
@@ -143,9 +143,9 @@ Function MRNAP {
                 New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
-                Return $fullPath
+                Return [string]$fullPath
             }
-            Return $fullPath
+            Return [string]$fullPath
         }
    
         $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
@@ -156,7 +156,7 @@ Function MRNAP {
                     New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
                 }
                 Catch {
-                    Return $fullPath
+                    Return [string]$fullPath
                 }
             }
            
@@ -164,10 +164,10 @@ Function MRNAP {
                 Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
-                Return $fullPath
+                Return [string]$fullPath
             }
         }
     }
    
-    Return $fullPath
+    Return [string]$fullPath
 }
