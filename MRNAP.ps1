@@ -35,10 +35,10 @@
   (produces C:\reports\yyyy_MM_ddThhmm-name.csv)
 
   MRNAP -ReportName Name -NoDateTimeSeconds -Move
-  (C:\reports\name.csv and anything with name.txt will move to old directory))
+  (C:\reports\name.csv and anything with name.csv will move to old directory)
 
   MRNAP -ReportName Name -Extension .txt -Move -DirectoryName B:\test
-  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with -name.txt will move to old directory)
+  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to old directory b:\test\old)
 #>
 Function MRNAP {
     [alias("MoldReportNameAndPath")]
@@ -143,6 +143,7 @@ Function MRNAP {
                 New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
+                Write-Warning "Problem trying to create $DirectoryName."
                 Return [string]$fullPath
             }
             Return [string]$fullPath
@@ -156,6 +157,7 @@ Function MRNAP {
                     New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
                 }
                 Catch {
+                    Write-Warning "Problem trying to create $DirectoryNameOld."
                     Return [string]$fullPath
                 }
             }
@@ -164,10 +166,12 @@ Function MRNAP {
                 Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
+                Write-Warning "Problem trying to move files named like $ReportNameExt"
                 Return [string]$fullPath
             }
         }
     }
    
+    #===Return the filename with path and end this function===========================
     Return [string]$fullPath
 }
