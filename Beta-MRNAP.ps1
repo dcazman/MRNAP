@@ -68,7 +68,7 @@ Function MRNAP {
         Return $null
     }
 
-    # Extension Section. Checks for a perion if the default is not used
+    # Extension Section. Checks for a period if the default is not used
     If ($Extension -ne ".csv") {
         If (!($Extension.contains("."))) {
             $Extension = '.' + $Extension
