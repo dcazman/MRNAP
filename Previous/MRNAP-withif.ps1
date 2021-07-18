@@ -22,13 +22,13 @@ include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
 directory.
 
 .NOTES
-The goal of this function is to generate unique report names. IThis function will help make a readable
+The goal of this function is to generate unique report or file names. This function will help make a readable
 filename and try move old files of similar name from the directory to a nested directory. 
 If you need a unique file name this function will help. 
 Designed to work on Windows OS.
 
 .EXAMPLE
-Run this function like the following
+Run MRNAP function like the following
   MRNAP -ReportName Name
   (C:\reports\yyyy_MM_ddThhmmss-name.csv).
 
@@ -75,8 +75,8 @@ Function MRNAP {
         }
     }
 
-    # This mini function is courtesy of the https://stackoverflow.com/ community
-    # Because Join-Path won't work with drive letters that don't exist
+    <# This mini function below is courtesy of the https://stackoverflow.com/ community
+    Because Join-Path won't work with drive letters that don't exist #>
     function Join-AnyPath {
         Return ($Args -join '\') -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
     }
@@ -103,52 +103,31 @@ Function MRNAP {
 
     # Just The Date Section
     if ($JustDate -and $null -eq $fullPath) {
-        If ($NoSeperators) {
-            $Dash = "yyyyMMdd"
+        If ($UTC) {
+            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt))
         }
         Else {
-            $Dash = "yyyy_MM_dd-"
-        }
-
-        if ($UTC) {
-            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("$Dash") + ($ReportNameExt))
-        }
-        Else {
-            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("$Dash") + ($ReportNameExt))
+            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt))
         }
     }
 
     # No seconds section
     If ($NoSeconds -and $null -eq $fullPath) {
-        If ($NoSeperators) {
-            $Dash = "yyyyMMddThhmm"
+        If ($UTC) {
+            $fullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt))
         }
         Else {
-            $Dash = "yyyy_MM_ddThhmm-"
-        }
-
-        if ($UTC) {
-            $fullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("$Dash") + ($ReportNameExt))
-        }
-        Else {
-            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("$Dash") + ($ReportNameExt))
+            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt))
         }
     }
 
     # Default section
     If ($null -eq $fullPath) {
-        If ($NoSeperators) {
-            $Dash = "yyyyMMddThhmmss"
-        }
-        Else {
-            $Dash = "yyyy_MM_ddThhmmss-"
-        }
-
         If ($UTC) {
-            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("$Dash") + ($ReportNameExt))
+            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
         }
         Else {
-            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("$Dash") + ($ReportNameExt))
+            $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
         }
     }
 
@@ -159,6 +138,16 @@ Function MRNAP {
         }
         Catch {
             $fullPath = $fullPath.replace('1H0LD', '')
+        }
+    }
+
+    # Remove dash and underscores with NoSeperators switch
+    If ($NoSeperators) {
+        Try {
+            $fullPath = $fullPath.replace('_','').replace('-','')
+        }
+        Catch {
+            $fullPath = $fullPath.replace('_','')
         }
     }
  
