@@ -184,6 +184,10 @@ Function MRNAP {
                 }
             }
         }
+        Else {
+            Write-Warning 'Move does not fully work with -ReportName empty'
+            Return [string]$FullPath
+        }
     }
     #=============Return the filename with path and end this function.======================#
     Return [string]$FullPath
