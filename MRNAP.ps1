@@ -50,8 +50,8 @@ Function MRNAP {
     [CmdletBinding()]
     param(
         [parameter(Position = 0, Mandatory = $False)][string]$ReportName,
-        [parameter(Position = 1,Mandatory = $False)][string]$DirectoryName = "C:\Reports",
-        [parameter(Position = 2,Mandatory = $False)][string]$Extension = ".csv",
+        [parameter(Position = 1, Mandatory = $False)][string]$DirectoryName = "C:\Reports",
+        [parameter(Position = 2, Mandatory = $False)][string]$Extension = ".csv",
         [parameter(Mandatory = $False)][switch]$UTC,
         [parameter(Mandatory = $False)][switch]$NoSeperators,
         [parameter(Mandatory = $False)][switch]$JustDate,
@@ -60,7 +60,7 @@ Function MRNAP {
         [parameter(Mandatory = $False)][switch]$Move
     )
    
-    <# ver 7.1, Author Dan Casmas 7/2021. Designed to work on Windows OS.
+    <# ver 7.2, Author Dan Casmas 7/2021. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
@@ -108,16 +108,26 @@ Function MRNAP {
 
     # Switch test with UTC switch and fullpath = null.
     Switch ($UTC -and $null -eq $FullPath) {
-        { $_ -eq $true } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
-        { $JustDate } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
-        { $NoSeconds } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
+        { $_ -eq $true -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
+        { $JustDate -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
+        { $NoSeconds -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
+
+        # Remove dash and underscores with NoSeperators switch.
+        { $_ -eq $true -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMddThhmmss") + ($ReportNameExt)) }
+        { $JustDate -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMdd") + ($ReportNameExt)); break }
+        { $NoSeconds -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyyMMddThhmm") + ($ReportNameExt)); break }
     }
 
     # Switch test with no UTC Switch and fullpath = null.
     Switch (!$UTC -and $null -eq $FullPath) {
-        { $_ -eq $true } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
-        { $JustDate } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
-        { $NoSeconds } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break } 
+        { $_ -eq $true -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
+        { $JustDate -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
+        { $NoSeconds -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
+
+        # Remove dash and underscores with NoSeperators switch.
+        { $_ -eq $true -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMddThhmmss") + ($ReportNameExt)) }
+        { $JustDate -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMdd") + ($ReportNameExt)); break }
+        { $NoSeconds -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyyMMddThhmm") + ($ReportNameExt)); break }
     }
 
     # Check for place holder flag. If flag remove 1H0LD placeholder.
@@ -130,16 +140,6 @@ Function MRNAP {
         }
     }
     
-    # Remove dash and underscores with NoSeperators switch.
-    If ($NoSeperators) {
-        Try {
-            $FullPath = $FullPath.replace('_', '').replace('-', '')
-        }
-        Catch {
-            $FullPath = $FullPath.replace('_', '')
-        }
-    }
-     
     #===============Move section. This tries to move file(s) like the ReportName into an old nested directory.
     If ($Move) {
         # Checks for DirectoryName and if not there tries to create it.
