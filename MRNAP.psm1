@@ -96,6 +96,9 @@ Function MRNAP {
         $ReportName = '1H0LD'
         $EmptyReportNameFlag = $true
     }
+    Else {
+        $EmptyReportNameFlag = $null
+    }
 
     # Forums the basic ReportName with extension and sets FullPath to null.
     $ReportNameExt = "$ReportName" + "$Extension"
@@ -154,29 +157,31 @@ Function MRNAP {
             Return [string]$FullPath
         }
        
-        <# Checks is there any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to
-        a nested direction named old. #>
-        $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
-        If ($MoveTest) {
-            $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
-            # test if nested old directory exists and if not tries to create it.
-            If (!(Test-Path $DirectoryNameOld)) {
+        <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to
+        a nested direction named old.  Does not work without a ReportName #>
+        If ($null -eq $EmptyReportNameFlag) {
+            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
+            If ($MoveTest) {
+                $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
+                # test if nested old directory exists and if not tries to create it.
+                If (!(Test-Path $DirectoryNameOld)) {
+                    Try {
+                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                    }
+                    Catch {
+                        Write-Warning "Problem trying to create $DirectoryNameOld."
+                        Return [string]$FullPath
+                    }
+                }
+               
                 Try {
-                    New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                    # Tries to move similar named files to the nested old directory.
+                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
                 }
                 Catch {
-                    Write-Warning "Problem trying to create $DirectoryNameOld."
+                    Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld."
                     Return [string]$FullPath
                 }
-            }
-               
-            Try {
-                # Tries to move similar named files to the nested old directory.
-                Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
-            }
-            Catch {
-                Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld."
-                Return [string]$FullPath
             }
         }
     }
