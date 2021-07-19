@@ -2,8 +2,8 @@
 .SYNOPSIS
 Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time.
 Extension is default csv and the default directory is C:\Reports.
-Additionally -Move will try to move out files of similar reportname to a nested directory named old example with default is
-C:\Reports\Old.
+Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with default 
+directory is C:\Reports\Old.
 Designed to work on Windows OS.
 
 .PARAMETER ReportName, DirectoryName, UTC, Extension, NoDateTimeSeconds, NoSeconds, JustDate, NoSeperators and Move
@@ -16,15 +16,16 @@ or -Extension txt.
 -NoDateTimeSeconds makes a filename with the default directory unless directoryname switch. Example C:\reports\test.csv.
 -NoSeconds makes a filename with the default directory unless directoryname switch and string are used. Date Time does not
 include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
--JustDate creates the filename and directory without time. Example C:\reports\yyyy_MM_ddThhmm.csv.
--NoSeperators makes the file name without any dashs. Example C:\reports\yyyyMMddThhmmss.csv.
--Move checks if simlar files with the reportname exist in the directory and if so moves out the similar files to a nested old 
-directory.
+-JustDate creates the filename and directory without date and time. Example C:\reports\yyyy_MM_dd.csv.
+-NoSeperators makes the filename without any dashs. Example C:\reports\yyyyMMddThhmmss.csv.
+-Move checks if simlar file(s) with the ReportName exists in the directory and if so tired to moves out the similar
+files to a nested old directory.
 
 .NOTES
-The goal of this function is to generate unique report or file names. This function will help make a readable
-filename and try move old files of similar name from the directory to a nested directory. 
-If you need a unique file name this function will help. 
+The goal of this function is to generate unique report or filenames. This function will help make a readable
+filename and tries to move old file(s) of similar name from the directory to a nested directory. 
+If you need a unique readable filename this function will help.
+If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
 Designed to work on Windows OS.
 
 .EXAMPLE
@@ -36,7 +37,7 @@ Run MRNAP function like the following
   (produces C:\reports\yyyy_MM_ddThhmm-name.csv).
 
   MRNAP -ReportName Name -NoDateTimeSeconds -Move
-  (C:\reports\name.csv and anything with name.csv will move to old directory).
+  (C:\reports\name.csv and anything with name.csv will move to old directory C:\reports\old).
 
   MRNAP -ReportName Name -Extension .txt -Move -DirectoryName B:\test
   (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to old directory b:\test\old).
@@ -46,10 +47,11 @@ Run MRNAP function like the following
 #>
 Function MRNAP {
     [alias("MoldReportNameAndPath")]
+    [CmdletBinding()]
     param(
-        [parameter(Mandatory = $False)][string]$ReportName,
-        [parameter(Mandatory = $False)][string]$DirectoryName = "C:\Reports",
-        [parameter(Mandatory = $False)][string]$Extension = ".csv",
+        [parameter(Position = 0, Mandatory = $False)][string]$ReportName,
+        [parameter(Position = 1,Mandatory = $False)][string]$DirectoryName = "C:\Reports",
+        [parameter(Position = 2,Mandatory = $False)][string]$Extension = ".csv",
         [parameter(Mandatory = $False)][switch]$UTC,
         [parameter(Mandatory = $False)][switch]$NoSeperators,
         [parameter(Mandatory = $False)][switch]$JustDate,
@@ -58,13 +60,16 @@ Function MRNAP {
         [parameter(Mandatory = $False)][switch]$Move
     )
    
-    <# ver 7, Author Dan Casmas 7/2021. Designed to work on Windows OS.
+    <# ver 7.1, Author Dan Casmas 7/2021. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
+    # Silenty Continue script on error.
+    $ErrorActionPreference = "SilentlyContinue"
+
     # Check for a value in ReportName string if NoDateTimeSeconds switch is used.
     If ([string]::IsNullOrWhiteSpace($ReportName) -and $NoDateTimeSeconds) {
-        Write-Warning 'ReportName needs a value to use NoDateTimeSeconds switch.'
+        Write-Warning 'ReportName needs a value to use the NoDateTimeSeconds switch.'
         Return $null
     }
 
@@ -75,81 +80,81 @@ Function MRNAP {
         }
     }
 
-    <# This mini function below is courtesy of the https://stackoverflow.com/ community
+    <# This mini function below is courtesy of the https://stackoverflow.com/ community.
     Because Join-Path won't work with drive letters that don't exist. #>
     function Join-AnyPath {
         Return ($Args -join '\') -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
     }
 
-    # Test for C:\ or nothing. Skip if directory has :\ .
-    If (!($DirectoryName -like ('?:\*'))) {
-        $DirectoryName = Join-AnyPath 'c:\' $DirectoryName
+    # Test for C:\ or nothing. Skip if DirectoryName string has a charter and : in it.
+    If (!($DirectoryName.Substring(1, 1) -like (':'))) {
+        $DirectoryName = Join-AnyPath 'C:' $DirectoryName
     }
 
-    # If no entry for ReportName string then add a place holder with a flag.
+    # If no entry for ReportName string then add a place holder '1H0LD' with a flag.
     If ([string]::IsNullOrWhiteSpace($ReportName)) {
         $ReportName = '1H0LD'
-        $EmptyReportName = $true
+        $EmptyReportNameFlag = $true
     }
 
-    # Forums the basic reportname with extension and sets fullpath to null.
+    # Forums the basic ReportName with extension and sets FullPath to null.
     $ReportNameExt = "$ReportName" + "$Extension"
-    $fullPath = $null
+    $FullPath = $null
 
-    # If NoDateTimeSeconds switch check
+    # If NoDateTimeSeconds switch used.
     If ($NoDateTimeSeconds) {
-        $fullPath = Join-AnyPath $DirectoryName $ReportNameExt
+        $FullPath = Join-AnyPath $DirectoryName $ReportNameExt
     }
 
     # Switch test with UTC switch and fullpath = null.
-    Switch ($UTC -and $null -eq $fullPath) {
-        { $_ -eq $true } { $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
-        { $JustDate } { $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)) }
-        { $NoSeconds } { $fullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)) }
+    Switch ($UTC -and $null -eq $FullPath) {
+        { $_ -eq $true } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
+        { $JustDate } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
+        { $NoSeconds } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
     }
 
     # Switch test with no UTC Switch and fullpath = null.
-    Switch (!$UTC -and $null -eq $fullPath) {
-        { $_ -eq $true } { $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
-        { $JustDate } { $fullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt)) }
-        { $NoSeconds } { $fullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)) } 
+    Switch (!$UTC -and $null -eq $FullPath) {
+        { $_ -eq $true } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
+        { $JustDate } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
+        { $NoSeconds } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break } 
     }
 
-    # Check for place holder flag. If there remove remove 1H0LD placeholder.
-    If ($EmptyReportName) {
+    # Check for place holder flag. If flag remove 1H0LD placeholder.
+    If ($EmptyReportNameFlag) {
         Try {
-            $fullPath = $fullPath.replace('-', '').replace('1H0LD', '')
+            $FullPath = $FullPath.replace('-', '').replace('1H0LD', '')
         }
         Catch {
-            $fullPath = $fullPath.replace('1H0LD', '')
+            $FullPath = $FullPath.replace('1H0LD', '')
         }
     }
     
     # Remove dash and underscores with NoSeperators switch.
     If ($NoSeperators) {
         Try {
-            $fullPath = $fullPath.replace('_', '').replace('-', '')
+            $FullPath = $FullPath.replace('_', '').replace('-', '')
         }
         Catch {
-            $fullPath = $fullPath.replace('_', '')
+            $FullPath = $FullPath.replace('_', '')
         }
     }
      
-    #===============Move section. This tries to move out file(s) like the reportname into an old directory.
+    #===============Move section. This tries to move file(s) like the ReportName into an old nested directory.
     If ($Move) {
-        # Checks for DirectoryName and not there tries to create it.
+        # Checks for DirectoryName and if not there tries to create it.
         If (!(test-path $DirectoryName)) {
             Try {
                 New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
                 Write-Warning "Problem trying to create $DirectoryName."
-                Return [string]$fullPath
+                Return [string]$FullPath
             }
-            Return [string]$fullPath
+            Return [string]$FullPath
         }
        
-        <# Checks is there any similar files to move and if not skips moving. If found tries to move the similar file(s) to
+        <# Checks is there any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to
         a nested direction named old. #>
         $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
         If ($MoveTest) {
@@ -161,7 +166,7 @@ Function MRNAP {
                 }
                 Catch {
                     Write-Warning "Problem trying to create $DirectoryNameOld."
-                    Return [string]$fullPath
+                    Return [string]$FullPath
                 }
             }
                
@@ -171,10 +176,10 @@ Function MRNAP {
             }
             Catch {
                 Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld."
-                Return [string]$fullPath
+                Return [string]$FullPath
             }
         }
     }
     #=============Return the filename with path and end this function.======================#
-    Return [string]$fullPath
+    Return [string]$FullPath
 }
