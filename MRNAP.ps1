@@ -1,9 +1,11 @@
 <#
 .SYNOPSIS
-Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time.
-Extension is default csv and the default directory is C:\Reports.
+Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and
+a name without seperators.
+Extension is default .csv and the default directory is C:\Reports.
 Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with default 
 directory is C:\Reports\Old.
+If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
 Designed to work on Windows OS.
 
 .PARAMETER ReportName, DirectoryName, UTC, Extension, NoDateTimeSeconds, NoSeconds, JustDate, NoSeperators and Move
@@ -60,7 +62,7 @@ Function MRNAP {
         [parameter(Mandatory = $False)][switch]$Move
     )
    
-    <# ver 7.2, Author Dan Casmas 7/2021. Designed to work on Windows OS.
+    <# ver 7.3, Author Dan Casmas 7/2021. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
@@ -87,8 +89,10 @@ Function MRNAP {
     }
 
     # Test for C:\ or nothing. Skip if DirectoryName string has a charter and : in it.
-    If (!($DirectoryName.Substring(1, 1) -like (':'))) {
-        $DirectoryName = Join-AnyPath 'C:' $DirectoryName
+    If ($DirectoryName -ne "C:\Reports") {
+        If (!($DirectoryName.Substring(1, 1) -eq (':'))) {
+            $DirectoryName = Join-AnyPath 'C:' $DirectoryName
+        }
     }
 
     # If no entry for ReportName string then add a place holder '1H0LD' with a flag.
@@ -158,7 +162,7 @@ Function MRNAP {
         }
        
         <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to
-        a nested direction named old.  Does not work without a ReportName #>
+        a nested direction named old.  Does not work without a ReportName value #>
         If ($null -eq $EmptyReportNameFlag) {
             $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
             If ($MoveTest) {
@@ -169,7 +173,7 @@ Function MRNAP {
                         New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
                     }
                     Catch {
-                        Write-Warning "Problem trying to create $DirectoryNameOld."
+                        Write-Warning "Problem trying to create $DirectoryNameOld"
                         Return [string]$FullPath
                     }
                 }
@@ -179,13 +183,13 @@ Function MRNAP {
                     Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
                 }
                 Catch {
-                    Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld."
+                    Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld"
                     Return [string]$FullPath
                 }
             }
         }
         Else {
-            Write-Warning 'Move does not fully work with -ReportName empty'
+            Write-Warning 'Move can not move files with -ReportName value empty.'
             Return [string]$FullPath
         }
     }
