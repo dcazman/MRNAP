@@ -115,26 +115,26 @@ Function MRNAP {
 
     # Switch test with UTC switch and fullpath = null.
     Switch ($UTC -and $null -eq $FullPath) {
-        { $_ -eq $true -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
         { $JustDate -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
         { $NoSeconds -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
+        { !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)); break }
 
         # Remove dash and underscores with NoSeperators switch.
-        { $_ -eq $true -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMddThhmmss") + ($ReportNameExt)) }
         { $JustDate -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMdd") + ($ReportNameExt)); break }
         { $NoSeconds -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyyMMddThhmm") + ($ReportNameExt)); break }
+        { $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMddThhmmss") + ($ReportNameExt)); break }
     }
 
     # Switch test with no UTC Switch and fullpath = null.
     Switch (!$UTC -and $null -eq $FullPath) {
-        { $_ -eq $true -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) }
         { $JustDate -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt)); break }
         { $NoSeconds -and !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)); break }
+        { !$NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)); break }
 
         # Remove dash and underscores with NoSeperators switch.
-        { $_ -eq $true -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMddThhmmss") + ($ReportNameExt)) }
         { $JustDate -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMdd") + ($ReportNameExt)); break }
         { $NoSeconds -and $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyyMMddThhmm") + ($ReportNameExt)); break }
+        { $NoSeperators } { $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMddThhmmss") + ($ReportNameExt)); break }
     }
 
     # Check for place holder flag. If flag remove 1H0LD placeholder.
