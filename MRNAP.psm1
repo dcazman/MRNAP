@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
 Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and
-a name without seperators.
+a name without separators.
 
 .PARAMETER ReportName, DirectoryName, Extension, UTC, NoSeperators, NoSeconds, JustDate, NoDateTimeSeconds and Move
 -ReportName (name of report).
@@ -10,25 +10,24 @@ name. -DirectoryName Test (is C:\test) or -DirectoryName Z:\temp (is z:\temp) or
 -Extension (Default is .csv) but can be anything with this switch followed by an extension name. -Extension .txt 
 or -Extension txt.
 -UTC makes the DateTime Universal Time.
--NoSeperators makes the filename without any dashs. Example C:\reports\yyyyMMddThhmmss.csv.
+-NoSeperators makes the filename without any dashes. Example C:\reports\yyyyMMddThhmmss.csv.
 -NoSeconds makes a filename with the default directory unless directoryname switch and string are used. Date Time does not
 include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
 -JustDate creates the filename and directory without date and time. Example C:\reports\yyyy_MM_dd.csv.
--NoDateTimeSeconds makes a filename with the default directory unless directoryname switch. Example C:\reports\test.csv.
--Move checks if simlar file(s) with the ReportName exists in the directory and if so tired to moves out the similar
+-NoDateTimeSeconds makes a filename with the default directory unless the DirectoryName switch is used. Example C:\reports\test.csv.
+-Move checks if similar file(s) with the ReportName exists in the directory and if so tired to moves out the similar
 files to a nested old directory.
 
 .Description
 Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and
-a name without seperators.
+a name without separators.
 Extension is default .csv and the default directory is C:\Reports.
-Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with default 
-directory is C:\Reports\Old.
+Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with the default directory is C:\Reports\Old.
 If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
 Designed to work on Windows OS.
 
 .NOTES
-The goal of this function is to generate unique report or filenames. This function will help make a readable
+The goal of this function is to generate unique reports or filenames. This function will help make a readable
 filename and tries to move old file(s) of similar name from the directory to a nested directory. 
 If you need a unique readable filename this function will help.
 If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
@@ -46,10 +45,10 @@ Run MRNAP function like the following
   (produces C:\reports\yyyy_MM_ddThhmm-name.csv).
 
   MRNAP -ReportName Name -NoDateTimeSeconds -Move
-  (C:\reports\name.csv and anything with name.csv will move to old directory C:\reports\old).
+  (C:\reports\name.csv and anything with name.csv will move to the old directory C:\reports\old).
 
   MRNAP -ReportName Name -Extension .txt -Move -DirectoryName B:\test
-  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to old directory b:\test\old).
+  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to the old directory b:\test\old).
 
   MRNAP
   (produces C:\reports\yyyy_MM_ddThhmmss.csv).
@@ -73,10 +72,10 @@ Function MRNAP {
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
-    # Silenty Continue script on error.
+    # Silently Continue script on error.
     $ErrorActionPreference = "SilentlyContinue"
 
-    # Check for a value in ReportName string if NoDateTimeSeconds switch is used.
+    # Check for a value in the ReportName string if NoDateTimeSeconds switch is used.
     If ([string]::IsNullOrWhiteSpace($ReportName) -and $NoDateTimeSeconds) {
         Write-Warning 'ReportName needs a value to use the NoDateTimeSeconds switch.'
         Return $null
@@ -102,7 +101,7 @@ Function MRNAP {
         }
     }
 
-    # If no entry for ReportName string then add a place holder '1H0LD' with a flag.
+    # If there is no entry for ReportName string then add a placeholder '1H0LD' with a flag.
     If ([string]::IsNullOrWhiteSpace($ReportName)) {
         $ReportName = '1H0LD'
         $EmptyReportNameFlag = $true
@@ -115,7 +114,7 @@ Function MRNAP {
     $ReportNameExt = "$ReportName" + "$Extension"
     $FullPath = $null
 
-    # If NoDateTimeSeconds switch used.
+    # If NoDateTimeSeconds switch is used.
     If ($NoDateTimeSeconds) {
         $FullPath = Join-AnyPath $DirectoryName $ReportNameExt
     }
@@ -184,7 +183,7 @@ Function MRNAP {
         }
     }
 
-    # Check for place holder flag. If flag remove 1H0LD placeholder.
+    # Check for placeholder flag. If flag remove 1H0LD placeholder.
     IF ($EmptyReportNameFlag) {
         Try {
             $FullPath = $FullPath.replace('-', '').replace('1H0LD', '')
@@ -214,7 +213,7 @@ Function MRNAP {
             $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
             If ($MoveTest) {
                 $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
-                # test if nested old directory exists and if not tries to create it.
+                # test if nested old directory exists and if not try to create it.
                 If (!(Test-Path $DirectoryNameOld)) {
                     Try {
                         New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
