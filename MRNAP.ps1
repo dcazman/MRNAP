@@ -83,7 +83,7 @@ Function MRNAP {
 
     # Extension Section. Checks for a period if the default is not used.
     If ($Extension -ne ".csv") {
-        If (!($Extension.Substring(0, 1) -eq ("."))) {
+        If (!($Extension -like ".*")) {
             $Extension = '.' + $Extension
         }
     }
@@ -96,7 +96,7 @@ Function MRNAP {
 
     # Test for C:\ or nothing. Skip if DirectoryName string has a charter and : in it.
     If ($DirectoryName -ne "C:\Reports") {
-        If (!($DirectoryName.Substring(1, 1) -eq (':'))) {
+        If (!($DirectoryName -like "*:*")) {
             $DirectoryName = Join-AnyPath 'C:' $DirectoryName
         }
     }
