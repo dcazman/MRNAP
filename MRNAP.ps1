@@ -123,62 +123,62 @@ Function MRNAP {
         If ($UTC) {
             If (!$NoSeperators) {  
                 If ($JustDate) {
-                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt)) 
+                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_dd-") + ($ReportNameExt))
+                    Break 
                 }
 
-                IF (!$FullPath -and $NoSeconds) { 
-                    $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt)) 
+                IF ($NoSeconds) { 
+                    $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath) {
-                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt)) 
-                }
+                $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
+              
             }
             # Remove dash and underscores with NoSeperators switch.
-            IF (!$FullPath -and $NoSeperators) {
+            IF ($NoSeperators) {
                 IF ($JustDate) {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMdd") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath -and $NoSeconds) {
+                IF ($NoSeconds) {
                     $FullPath = Join-AnyPath $DirectoryName ((get-date).ToUniversalTime().ToString("yyyyMMddThhmm") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath) {
-                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMddThhmmss") + ($ReportNameExt))
-                }
+                $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMddThhmmss") + ($ReportNameExt))
             }
         }
-
         # Switch test with no UTC Switch and fullpath = null.
         IF (!$UTC) {
-            IF (!$FullPath -and !$NoSeperators) {
+            IF (!$NoSeperators) {
                 IF ($JustDate) {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_dd-") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath -and $NoSeconds) {
+                IF ($NoSeconds) {
                     $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyy_MM_ddThhmm-") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath) {
-                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
-                }
+                $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
             }
 
             # Remove dash and underscores with NoSeperators switch.
-            IF (!$FullPath -and $NoSeperators) {
+            IF ($NoSeperators) {
                 IF ($JustDate) {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMdd") + ($ReportNameExt))
+                    Break
                 }
 
-                IF (!$FullPath -and $NoSeconds) {
+                IF ($NoSeconds) {
                     $FullPath = Join-AnyPath $DirectoryName ((get-date).ToString("yyyyMMddThhmm") + ($ReportNameExt))
+                    Break
                 }
 
-                If (!$FullPath) {
-                    $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMddThhmmss") + ($ReportNameExt))
-                }
+                $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMddThhmmss") + ($ReportNameExt))
             }
         }
     }
@@ -198,7 +198,7 @@ Function MRNAP {
         # Checks for DirectoryName and if not there tries to create it.
         IF (!(test-path $DirectoryName)) {
             Try {
-                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction $ErrorActionPreference -Force | Out-Null
             }
             Catch {
                 Write-Warning "Problem trying to create $DirectoryName."
@@ -207,16 +207,15 @@ Function MRNAP {
             Return [string]$FullPath
         }
        
-        <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to
-        a nested direction named old.  Does not work without a ReportName value #>
+        <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to a nested direction named old.  Does not work without a ReportName value #>
         If ($null -eq $EmptyReportNameFlag) {
-            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
+            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction $ErrorActionPreference
             If ($MoveTest) {
                 $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
                 # test if nested old directory exists and if not try to create it.
                 If (!(Test-Path $DirectoryNameOld)) {
                     Try {
-                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
+                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction $ErrorActionPreference -Force | Out-Null
                     }
                     Catch {
                         Write-Warning "Problem trying to create $DirectoryNameOld"
@@ -226,7 +225,7 @@ Function MRNAP {
                
                 Try {
                     # Tries to move similar named files to the nested old directory.
-                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
+                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction $ErrorActionPreference -Force | Out-Null
                 }
                 Catch {
                     Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld"
@@ -235,7 +234,7 @@ Function MRNAP {
             }
         }
         Else {
-            Write-Warning 'Move can not move files with -ReportName value empty.'
+            Write-Warning 'Move can not move files with the -ReportName value empty.'
             Return [string]$FullPath
         }
     }
