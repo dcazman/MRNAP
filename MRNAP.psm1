@@ -123,9 +123,9 @@ Function MRNAP {
                 Else {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
                 }
-              
             }
-            Else {
+
+            If ($NoSeperators) {
                 # Remove dash and underscores with NoSeperators switch.
                 IF ($JustDate) {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToUniversalTime().ToString("yyyyMMdd") + ($ReportNameExt))
@@ -139,7 +139,7 @@ Function MRNAP {
             }
         }
         # test for !UTC switch and then related switches
-        Else {
+        IF (!$UTC) {
             #Test for !noseperators switch below
             IF (!$NoSeperators) {
                 IF ($JustDate) {
@@ -152,7 +152,8 @@ Function MRNAP {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyy_MM_ddThhmmss-") + ($ReportNameExt))
                 }
             }
-            Else {
+            
+            IF ($NoSeperators) {
                 # Remove dash and underscores with NoSeperators switch.
                 IF ($JustDate) {
                     $FullPath = Join-AnyPath $DirectoryName ((Get-Date).ToString("yyyyMMdd") + ($ReportNameExt))
