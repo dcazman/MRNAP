@@ -1,7 +1,6 @@
 <#
 .SYNOPSIS
-Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and
-a name without separators.
+Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and a name without separators.
 .PARAMETER ReportName, DirectoryName, Extension, UTC, NoSeperators, NoSeconds, JustDate, NoDateTimeSeconds and Move
 -ReportName (name of report).
 -DirectoryName (Default is C:\Reports) but anything can be the directory with this switch followed by the directory
@@ -17,8 +16,7 @@ include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
 -Move checks if similar file(s) with the ReportName exists in the directory and if so tired to moves out the similar
 files to a nested old directory.
 .Description
-Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and
-a name without separators.
+Mold Report Name And Path. Options include no date and time, no seconds with date and time, utc time, just the date and a name without separators.
 Extension is default .csv and the default directory is C:\Reports.
 Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with the default directory is C:\Reports\Old.
 If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
@@ -40,7 +38,8 @@ Run MRNAP function like the following
   MRNAP -ReportName Name -NoDateTimeSeconds -Move
   (C:\reports\name.csv and anything with name.csv will move to the old directory C:\reports\old).
   MRNAP -ReportName Name -Extension .txt -Move -DirectoryName B:\test
-  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to the old directory b:\test\old).
+  (B:\test\yyyy_MM_ddThhmmss-name.txt and anything with *name.txt will move to the old directory
+  b:\test\old).
   MRNAP
   (produces C:\reports\yyyy_MM_ddThhmmss.csv).
 #>
