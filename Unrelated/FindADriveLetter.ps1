@@ -49,7 +49,7 @@ function FindADriveLetter {
         $Letter = FreeDriveLetter
     }
     Else {
-        $Letter = Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue -ErrorVariable ProcessError | Where-Object { $_.Name -like ([regex]'[efghijklmnopqrstuvwxyz]') -and ($_.displayroot -like "*$NameToMap*" -or $_.Description -like "*$NameToMap*" ) } | Select-Object -ExpandProperty Name
+        $Letter = Get-PSDrive -PSProvider FileSystem -ErrorAction SilentlyContinue -ErrorVariable ProcessError | Where-Object { $_.Name -like ([regex]'[e-z]') -and ($_.displayroot -like "*$NameToMap*" -or $_.Description -like "*$NameToMap*" ) } | Select-Object -ExpandProperty Name
 
         If ($ProcessError -or [string]::IsNullOrWhiteSpace($Letter)) {
             $Letter = FreeDriveLetter
