@@ -40,6 +40,7 @@ If (!($Add -or $Remove)) {
     $ActionCheck = $null
     while ($ActionCheck -ne "1" -and $ActionCheck -ne "2") {
         write-host "Hit enter to break. "  -ForegroundColor red  -NoNewline
+        write-host "Please Enter " -NoNewline
         write-host "1 for add" -ForegroundColor Green -NoNewline
         Write-host " or " -NoNewline
         write-host "2 for remove" -ForegroundColor Blue -NoNewline
@@ -49,10 +50,10 @@ If (!($Add -or $Remove)) {
         }
     }
     If ($ActionCheck -eq "1") {
-        $ADD = $true
+        $Add = $true
     }
     Else {
-        $ADD = $False
+        $Add = $False
     }
 }
 
@@ -75,7 +76,7 @@ while (!($DestinationEmail -as [System.Net.Mail.MailAddress])) {
 }
 
 $error.clear()
-If ($ADD) {
+If ($Add) {
     & gam.exe calendar $SourceEmail add editor $DestinationEmail
     $Flag = 'Add'
 }
