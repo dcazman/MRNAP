@@ -42,6 +42,7 @@ function GAMDelegateCalendar {
         $ActionCheck = $null
         while ($ActionCheck -ne "1" -and $ActionCheck -ne "2") {
             write-host "Hit enter to break. "  -ForegroundColor red  -NoNewline
+            write-host "Please Enter " -NoNewline
             write-host "1 for add" -ForegroundColor Green -NoNewline
             Write-host " or " -NoNewline
             write-host "2 for remove" -ForegroundColor Blue -NoNewline
@@ -51,10 +52,10 @@ function GAMDelegateCalendar {
             }
         }
         If ($ActionCheck -eq "1") {
-            $ADD = $true
+            $Add = $true
         }
         Else {
-            $ADD = $False
+            $Add = $False
         }
     }
 
@@ -77,7 +78,7 @@ function GAMDelegateCalendar {
     }
 
     $error.clear()
-    If ($ADD) {
+    If ($Add) {
         & gam.exe calendar $SourceEmail add editor $DestinationEmail
         $Flag = 'Add'
     }
@@ -98,10 +99,10 @@ function GAMDelegateCalendar {
 
         If (!$Problem) {
             $result = [PSCustomObject]@{
-                Source        = $SourceEmail
+                Source      = $SourceEmail
                 Destination = $DestinationEmail
-                Action        = $Flag
-                Error         = $LASTEXITCODE
+                Action      = $Flag
+                Error       = $LASTEXITCODE
             }
             $Filename = 'C:\reports\' + $SourceEmail.Split('@')[0] + '_' + $DestinationEmail.Split('@')[0] + "_$Flag" + "-Delegate" + '.csv'
             $result | Export-Csv $filename -NoTypeInformation
