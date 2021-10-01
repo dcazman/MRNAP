@@ -61,9 +61,6 @@ Function MRNAP {
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
-    # Silently Continue script on error.
-    $ErrorActionPreference = "SilentlyContinue"
-
     # Check for a value in the ReportName string if NoDateTimeSeconds switch is used.
     If ([string]::IsNullOrWhiteSpace($ReportName) -and $NoDateTimeSeconds) {
         Write-Warning 'ReportName needs a value to use the NoDateTimeSeconds switch.'
@@ -181,7 +178,7 @@ Function MRNAP {
         # Checks for DirectoryName and if not there tries to create it.
         IF (!(test-path $DirectoryName)) {
             Try {
-                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction $ErrorActionPreference -Force | Out-Null
+                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
             }
             Catch {
                 Write-Warning "Problem trying to create $DirectoryName."
@@ -192,13 +189,13 @@ Function MRNAP {
        
         <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to a nested direction named old.  Does not work without a ReportName value #>
         If ($null -eq $EmptyReportNameFlag) {
-            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction $ErrorActionPreference
+            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
             If ($MoveTest) {
                 $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
                 # test if nested old directory exists and if not try to create it.
                 If (!(Test-Path $DirectoryNameOld)) {
                     Try {
-                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction $ErrorActionPreference -Force | Out-Null
+                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
                     }
                     Catch {
                         Write-Warning "Problem trying to create $DirectoryNameOld"
@@ -208,7 +205,7 @@ Function MRNAP {
                
                 Try {
                     # Tries to move similar named files to the nested old directory.
-                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction $ErrorActionPreference -Force | Out-Null
+                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
                 }
                 Catch {
                     Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld"
