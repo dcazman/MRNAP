@@ -24,7 +24,7 @@ param (
         HelpMessage = "Delegate calendar.")]
     [switch]$Calendar,
     [parameter(Mandatory = $False,
-        HelpMessage = "Delegate alendar and mailbox.")]
+        HelpMessage = "Delegate calendar and mailbox.")]
     [switch]$CalAndMail,
     [parameter(Mandatory = $False,
         HelpMessage = "Add to calendar.")]
