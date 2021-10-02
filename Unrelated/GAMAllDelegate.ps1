@@ -27,10 +27,10 @@ param (
         HelpMessage = "Delegate calendar and mailbox.")]
     [switch]$CalAndMail,
     [parameter(Mandatory = $False,
-        HelpMessage = "Add to calendar.")]
+        HelpMessage = "Add to either/both calendar, mailbox.")]
     [switch]$Add,
     [parameter(Mandatory = $False,
-        HelpMessage = "Remove from calendar.")]
+        HelpMessage = "Remove from either/both calendar, mailbox.")]
     [switch]$Remove,
     [parameter(Mandatory = $False,
         HelpMessage = "No Report file is generated.")]
