@@ -1,22 +1,20 @@
 <#
 .SYNOPSIS
-Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just dthe ate, extension and finally no separators. 
+Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just date, extension and finally no separators. 
 .PARAMETER ReportName, DirectoryName, Extension, UTC, NoSeperators, NoSeconds, JustDate, NoDateTimeSeconds and Move
 -ReportName (name of report).
--DirectoryName (Default is C:\Reports) but anything can be the directory with this switch followed by the directory
-name. -DirectoryName Test (is C:\test) or -DirectoryName Z:\temp (is z:\temp) or -DirectoryName B:\ (is B:\).
+-DirectoryName (Default is C:\Reports) but anything can be the directory with this switch followed by the directory name. -DirectoryName Test (is C:\test) or -DirectoryName Z:\temp (is z:\temp)
+or -DirectoryName B:\ (is B:\).
 -Extension (Default is .csv) but can be anything with this switch followed by an extension name. -Extension .txt 
 or -Extension txt.
 -UTC makes the DateTime Universal Time.
 -NoSeperators makes the filename without any dashes. Example C:\reports\yyyyMMddThhmmss.csv.
--NoSeconds makes a filename with the default directory unless directoryname switch and string are used. Date Time does not
-include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
+-NoSeconds makes a filename with the default directory unless directoryname switch and string are used. Date Time does not include seconds C:\reports\yyyy_MM_ddThhmm-test.csv.
 -JustDate creates the filename and directory without date and time. Example C:\reports\yyyy_MM_dd.csv.
 -NoDateTimeSeconds makes a filename with the default directory unless the DirectoryName switch is used. Example C:\reports\test.csv.
--Move checks if similar file(s) with the ReportName exists in the directory and if so tired to moves out the similar
-files to a nested old directory.
+-Move checks if similar file(s) with the ReportName exists in the directory and if so tired to moves out the similar files to a nested old directory.
 .Description
-Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just dthe ate, extension and finally no separators. Extension is default .csv and the default directory is C:\Reports.
+Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just date, extension and finally no separators. Extension is default .csv and the default directory is C:\Reports.
 Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with the default directory is C:\Reports\Old.
 If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
 Designed to work on Windows OS.
@@ -57,7 +55,7 @@ Function MRNAP {
         [parameter(Mandatory = $False)][switch]$Move
     )
    
-    <# ver 7.5, Author Dan Casmas 7/2021. Designed to work on Windows OS.
+    <# ver 8, Author Dan Casmas 7/2021. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
@@ -175,47 +173,44 @@ Function MRNAP {
     
     #===============Move section. This tries to move file(s) like the ReportName into an old nested directory.
     IF ($Move) {
-        # Checks for DirectoryName and if not there tries to create it.
+        <# Checks for DirectoryName and if not there tries to create it. No need to do anything 
+        else if output directory does not exist. #>
         IF (!(test-path $DirectoryName)) {
-            Try {
-                New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
-            }
-            Catch {
+            New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
+            If ($ProcessError) {
                 Write-Warning "Problem trying to create $DirectoryName."
-                Return [string]$FullPath
             }
             Return [string]$FullPath
         }
        
         <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to a nested direction named old.  Does not work without a ReportName value #>
         If ($null -eq $EmptyReportNameFlag) {
-            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue
-            If ($MoveTest) {
+            $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue -ErrorVariable ProcessError
+            If ($MoveTest -and !($ProcessError)) {
                 $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
-                # test if nested old directory exists and if not try to create it.
+                # test if a nested old directory exists and if not try to create it.
                 If (!(Test-Path $DirectoryNameOld)) {
-                    Try {
-                        New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -Force | Out-Null
-                    }
-                    Catch {
+                    New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
+                    If ($ProcessError) {
                         Write-Warning "Problem trying to create $DirectoryNameOld"
                         Return [string]$FullPath
                     }
                 }
                
-                Try {
-                    # Tries to move similar named files to the nested old directory.
-                    Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -Force | Out-Null
-                }
-                Catch {
+                # Tries to move similar named files to the nested old directory.
+                Move-Item -Path ($DirectoryName + '\*' + $ReportNameExt) -Destination $DirectoryNameOld -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
+                If ($ProcessError) {
                     Write-Warning "Problem trying to move files named like $ReportNameExt to $DirectoryNameOld"
                     Return [string]$FullPath
                 }
             }
+            ElseIf ($MoveTest -and $ProcessError) {
+                Write-Warning "Problem searching for files"
+                Return [string]$FullPath
+            }
         }
         Else {
             Write-Warning 'Move can not move files with the -ReportName value empty.'
-            Return [string]$FullPath
         }
     }
     #=============Return the filename with path and end this function.======================#
