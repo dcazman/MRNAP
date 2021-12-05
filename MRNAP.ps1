@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just date, extension and finally no separators. 
-.PARAMETER ReportName, DirectoryName, Extension, UTC, NoSeperators, NoSeconds, JustDate, NoDateTimeSeconds and Move
+Mold Report Name And Path function. Options include report name,directory,no date and time,no seconds with date time,utc time,just date,extension and finally no separators. 
+.PARAMETER ReportName,DirectoryName,Extension,UTC,NoSeperators,NoSeconds,JustDate,NoDateTimeSeconds and Move
 -ReportName (name of report).
 -DirectoryName (Default is C:\Reports) but anything can be the directory with this switch followed by the directory name. -DirectoryName Test (is C:\test) or -DirectoryName Z:\temp (is z:\temp)
 or -DirectoryName B:\ (is B:\).
@@ -14,7 +14,7 @@ or -Extension txt.
 -NoDateTimeSeconds makes a filename with the default directory unless the DirectoryName switch is used. Example C:\reports\test.csv.
 -Move checks if similar file(s) with the ReportName exists in the directory and if so tired to moves out the similar files to a nested old directory.
 .Description
-Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just date, extension and finally no separators. Extension is default .csv and the default directory is C:\Reports.
+Mold Report Name And Path function. Options include report name,directory,no date and time,no seconds with date time,utc time,just date,extension and finally no separators. Extension is default .csv and the default directory is C:\Reports.
 Additionally -Move will try to move files with similar ReportName to a nested directory named old. Example with the default directory is C:\Reports\Old.
 If ReportName does not have a value the NoDateTimeSeconds switch can't be used.
 Designed to work on Windows OS.
@@ -55,7 +55,7 @@ Function MRNAP {
         [parameter(Mandatory = $False)][switch]$Move
     )
    
-    <# ver 8, Author Dan Casmas 7/2021. Designed to work on Windows OS.
+    <# ver 7.5,Author Dan Casmas 7/2021. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1 .#>
     #Requires -Version 5.1
 
@@ -175,22 +175,38 @@ Function MRNAP {
     IF ($Move) {
         <# Checks for DirectoryName and if not there tries to create it. No need to do anything 
         else if output directory does not exist. #>
+        $ProcessError = $null
         IF (!(test-path $DirectoryName)) {
-            New-Item -Path $DirectoryName -ItemType Directory -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
+            $Dircreate = New-Item -ItemType Directory -Force -Path $($DirectoryName.Substring(0, 3)) -Name $($DirectoryName.Substring(3)) -ErrorAction SilentlyContinue -ErrorVariable ProcessError | Out-Null
+
             If ($ProcessError) {
                 Write-Warning "Problem trying to create $DirectoryName."
+                [bool]$Created = $False
             }
-            Return [string]$FullPath
+            Else {
+                [bool]$Created = $true
+            }
+        }
+
+        If ($Created) {
+            $Dircreate | Out-Null
+            If ($FullPath -as [string]) {
+                Return [string]$FullPath
+            }
+            Else {
+                Return [string]$FullPath[1]
+            }
         }
        
         <# Checks if there are any similar file(s) to move and if not skips moving. If found tries to move the similar file(s) to a nested direction named old.  Does not work without a ReportName value #>
         If ($null -eq $EmptyReportNameFlag) {
             $MoveTest = Get-Childitem -path $DirectoryName -filter ('*' + $ReportNameExt) -file -ErrorAction SilentlyContinue -ErrorVariable ProcessError
-            If ($MoveTest -and !($ProcessError)) {
+            If ($MoveTest -and (-not $ProcessError)) {
                 $DirectoryNameOld = Join-AnyPath $DirectoryName 'old'
                 # test if a nested old directory exists and if not try to create it.
                 If (!(Test-Path $DirectoryNameOld)) {
-                    New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
+                    $Dircreate = New-Item -ItemType Directory -Force -Path $DirectoryNameOld.Substring(0, 3) -Name $DirectoryNameOld.Substring(3) -ErrorAction SilentlyContinue -ErrorVariable ProcessError | Out-Null
+                    #New-Item -Path $DirectoryNameOld -ItemType Directory -ErrorAction SilentlyContinue -ErrorVariable ProcessError -Force
                     If ($ProcessError) {
                         Write-Warning "Problem trying to create $DirectoryNameOld"
                         Return [string]$FullPath
