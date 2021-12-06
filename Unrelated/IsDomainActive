@@ -1,0 +1,64 @@
+<# 
+The goal is to take a domain or email address and find 
+if the domain has the following records
+A,
+MX,
+SPF,
+DMARC.
+Returns an object. with true or false for each record type above.
+#>
+
+function IsDomainActive {
+    param (
+        [parameter(Mandatory = $true)][string]$Domain
+    )
+    
+    If ($Domain -notlike '*.*') {
+        Write-Warning "Domain not valid please input full domain. Example Facebook.com"
+        Return $null
+    }
+
+    Try {
+        $TestDomain = ([Net.Mail.MailAddress]$Domain).Host
+    }
+    Catch {
+        $TestDomain = $Domain
+    }
+
+    If (Resolve-DnsName $TestDomain -Type A -Server '8.8.8.8' -ErrorAction SilentlyContinue) {
+        [bool]$ATest = $true
+    }
+    Else {
+        [bool]$ATest = $false
+    }
+
+    If (Resolve-DnsName $TestDomain -Type mx -Server '8.8.8.8' -ErrorAction SilentlyContinue) {
+        [bool]$MXTest = $true
+    }
+    Else {
+        [bool]$MXTest = $false
+    }
+
+    If (Resolve-DnsName -Name $TestDomain -Server '8.8.8.8' -Type TXT -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } -ErrorAction SilentlyContinue) {
+        [bool]$SPFTest = $true
+    }
+    Else {
+        [bool]$SPFTest = $false
+    }
+
+    If (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Server '8.8.8.8' -Type TXT -ErrorAction SilentlyContinue) {
+        [bool]$DMARCTest = $true
+    }
+    Else {
+        [bool]$DMARCTest = $false
+    } 
+
+    $Result = [PSCustomObject]@{
+        A     = $ATest
+        MX    = $MXTest
+        SPF   = $SPFTest
+        DMARC = $DMARCTest
+    }
+
+    Return [PSCustomObject]$Result
+}
