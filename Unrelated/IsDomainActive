@@ -1,8 +1,9 @@
 <#
-This is my current favorite creation. A simple script find if there are DNS records A,MX,SPF,DMARC and DKIM
+This is my current favorite creation. A simple script that tries to find if there are the following DNS records A,MX,SPF,DMARC and DKIM.
 
-Run and enter the full domain or an email address
+Run the script and enter the full domain name or an email address.
 
+Examples:
 .\isdomainactive.ps1 -domain facebook.com
 
 switch -sub will test the subdomain
@@ -18,7 +19,7 @@ switch -more will provide value of MX,SPF,DMARC and DKIM (if -Selector is used)
 .\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
 .\isdomainactive.ps1 -domain cnn.facebook.com -selector face
 
-Result comes back as an object
+Results if any comes back as an object and on host.
 #>
 param (    
     [parameter(Mandatory = $true,
@@ -40,7 +41,7 @@ param (
 )
 
 <#
-ver 1, Author Dan Casmas 10/2022. Designed to work on Windows OS.
+ver 2, Author Dan Casmas 10/2022. Designed to work on Windows OS.
 Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1
 Parts of this code was written by Jordan W.
 #>
@@ -57,12 +58,12 @@ Catch {
 
 #Removes @
 If ($TestDomain -like '@*') {
-    [string]$TestDomain = $TestDomain.Replace('@','').Trim()
+    [string]$TestDomain = $TestDomain.Replace('@', '').Trim()
 }
 
 #get the last two items in the array and join them with dot
 if (-not $Sub) {
-    [string]$TestDomain = $TestDomain.Split(".")[-2,-1] -join "."
+    [string]$TestDomain = $TestDomain.Split(".")[-2, -1] -join "."
 }
 
 #checks if -Selector is not used
@@ -82,8 +83,9 @@ If ($More) {
         [string]$resultmx = $false
     }
     Else {
+        [string]$resultmx = "name pref ttl`n"  
         foreach ($Item in $mx) {
-            [string]$resultmx += $Item.NameExchange + " $($Item.Preference)`n"
+            [string]$resultmx += $Item.NameExchange + " $($Item.Preference)" + " $($Item.ttl)`n"
         }
     }
 
@@ -129,7 +131,7 @@ Else {
 #Output
 Return [PSCustomObject]@{
     A        = $resultA
-    MX       = $resultmx.trim("`r`n")
+    MX       = $resultmx.trimend("`r`n")
     SPF      = $resultspf
     DMARC    = $resultdmarc
     DKIM     = $resultdkim
