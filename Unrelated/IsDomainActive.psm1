@@ -1,28 +1,30 @@
 <#
 This is my current favorite creation. A simple script that tries to find if there are the following DNS records A,MX,SPF,DMARC and DKIM.
 
-Run the script and enter the full domain name,an email address or entire URL.
+Import the module.
+Import-Module .\IsDomainActive.psm1
 
-Examples:
-.\isdomainactive.ps1 -domain facebook.com
+Examples: (enter the full domain name,an email address or entire URL.)
+isdomainactive -domain facebook.com
+$i = isdomainactive -domain cnn.facebook.com -selector face -more -sub
 
 switch -sub will test the subdomain
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub
+isdomainactive -domain cnn.facebook.com -sub
 
 switch -selector will test dkim with the string provided
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+isdomainactive -domain cnn.facebook.com -selector face
 
 switch -more will provide value of MX,SPF,DMARC and DKIM (if -Selector is used)
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more
-.\isdomainactive.ps1 -domain cnn.facebook.com -more
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+isdomainactive -domain cnn.facebook.com -sub -more -selector face
+isdomainactive -domain cnn.facebook.com -sub -selector face
+isdomainactive -domain cnn.facebook.com -selector face
+isdomainactive -domain cnn.facebook.com -sub -more
+isdomainactive -domain cnn.facebook.com -more
+isdomainactive -domain cnn.facebook.com -sub -more -selector face
+isdomainactive -domain cnn.facebook.com -sub -selector face
+isdomainactive -domain cnn.facebook.com -selector face
 
-Results if any comes back as an object and on host.
+Results if any comes back as an object.
 #>
 function isdomainactive {
     param (    
