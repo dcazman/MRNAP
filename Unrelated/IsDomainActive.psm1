@@ -1,33 +1,26 @@
 <#
 This is my current favorite creation. A simple script that tries to find if there are the following DNS records A,MX,SPF,DMARC and DKIM.
-
-Import the module.
-Import-Module .\IsDomainActive.psm1
-
-Examples: (enter the full domain name,an email address or entire URL.)
-isdomainactive -domain facebook.com
-$i = isdomainactive -domain cnn.facebook.com -selector face -more -sub
-
+Run the script and enter the full domain name,an email address or entire URL.
+Examples:
+.\isdomainactive.ps1 -domain facebook.com
 switch -sub will test the subdomain
-isdomainactive -domain cnn.facebook.com -sub
-
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub
 switch -selector will test dkim with the string provided
-isdomainactive -domain cnn.facebook.com -selector face
-
-switch -more will provide value of MX,SPF,DMARC and DKIM (if -Selector is used)
-isdomainactive -domain cnn.facebook.com -sub -more -selector face
-isdomainactive -domain cnn.facebook.com -sub -selector face
-isdomainactive -domain cnn.facebook.com -selector face
-isdomainactive -domain cnn.facebook.com -sub -more
-isdomainactive -domain cnn.facebook.com -more
-isdomainactive -domain cnn.facebook.com -sub -more -selector face
-isdomainactive -domain cnn.facebook.com -sub -selector face
-isdomainactive -domain cnn.facebook.com -selector face
-
-Results if any comes back as an object.
+.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+switch -notmore will return simple true of false
+.\isdomainactive.ps1 -domain cnn.facebook.com -notmore
+examples:
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -notmore -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -notmore
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -notmore -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+Results if any comes back as an object and on host.
 #>
 function isdomainactive {
-    param (    
+    param (
         [parameter(Mandatory = $true,
             HelpMessage = "Enter the full domain name. Example Facebook.com,enter an entire email address or enter full URL.")]
         [ValidateScript({
@@ -41,7 +34,7 @@ function isdomainactive {
         [parameter(Mandatory = $false,
             HelpMessage = "Allow subdomain. Example mail.facebook.com")][switch]$Sub,
         [parameter(Mandatory = $false,
-            HelpMessage = "Return A,MX,SPF,DMARC records detail if any. DKIM needs -Selector and string for DKIM detail to appear.")][switch]$More,
+            HelpMessage = "Return simple true or false for A,MX,SPF,DMARC and DKIM. DKIM needs -Selector to appear.")][switch]$NotMore,
         [parameter(Mandatory = $false,
             HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked'
     )
@@ -89,7 +82,7 @@ Parts of this code was written by Jordan W.
 
     #more detail on the return
     $resultmx = $null
-    If ($More) {
+    If (-not $NotMore) {
         #Brings back each record
         $mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference -ErrorAction SilentlyContinue
         if ([string]::IsNullOrWhiteSpace($mx.NameExchange)) {
