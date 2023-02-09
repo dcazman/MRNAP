@@ -12,19 +12,22 @@ switch -sub will test the subdomain
 switch -selector will test dkim with the string provided
 .\isdomainactive.ps1 -domain cnn.facebook.com -selector face
 
-switch -more will provide value of MX,SPF,DMARC and DKIM (if -Selector is used)
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more -selector face
+switch -boolean will return simple true of false
+.\isdomainactive.ps1 -domain cnn.facebook.com -boolean
+
+examples:
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean -selector face
 .\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
 .\isdomainactive.ps1 -domain cnn.facebook.com -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more
-.\isdomainactive.ps1 -domain cnn.facebook.com -more
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -more -selector face
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean
+.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean -selector face
 .\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
 .\isdomainactive.ps1 -domain cnn.facebook.com -selector face
 
 Results if any comes back as an object and on host.
 #>
-param (    
+[CmdletBinding()]
+param (
     [parameter(Mandatory = $true,
         HelpMessage = "Enter the full domain name. Example Facebook.com,enter an entire email address or enter full URL.")]
     [ValidateScript({
@@ -38,9 +41,9 @@ param (
     [parameter(Mandatory = $false,
         HelpMessage = "Allow subdomain. Example mail.facebook.com")][switch]$Sub,
     [parameter(Mandatory = $false,
-        HelpMessage = "Return A,MX,SPF,DMARC records detail if any. DKIM needs -Selector and string for DKIM detail to appear.")][switch]$More,
+        HelpMessage = "Return simple true or false for A,MX,SPF,DMARC and DKIM. DKIM needs -Selector to appear.")][switch]$Boolean,
     [parameter(Mandatory = $false,
-        HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked'
+        HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector
 )
 
 <#
@@ -50,7 +53,7 @@ Parts of this code was written by Jordan W.
 #>
 #Requires -Version 5.1
 
-#if email address pull down to domain and if not test domain
+#if email address pull down to domain,uri pull down to domain and if not test domain
 $TestDomain = $null
 Try {
     $TestDomain = ([Net.Mail.MailAddress]$Domain).Host
@@ -75,18 +78,24 @@ If ([string]::IsNullOrWhiteSpace($TestDomain)) {
     }
 }
 
+If ([string]::IsNullOrWhiteSpace($Selector)) {
+    $Selector = 'unchecked'
+}
+
 #get the last two items in the array and join them with dot
 if (-not $Sub) {
     [string]$TestDomain = $TestDomain.Split(".")[-2,-1] -join "."
 }
 
+#Allows a value other than true or false if dkim is selector is not provided.
 $resultdkim = 'unchecked'
 
+#default for if there is an A record at all.
 [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
 
 #more detail on the return
 $resultmx = $null
-If ($More) {
+If (-not $Boolean) {
     #Brings back each record
     $mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference -ErrorAction SilentlyContinue
     if ([string]::IsNullOrWhiteSpace($mx.NameExchange)) {
