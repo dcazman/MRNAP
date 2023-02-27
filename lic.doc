@@ -1,0 +1,13 @@
+The following numbers below are the current license numbers for Google. In Google you can see the numbers https://admin.google.com/ac/billing/subscriptions  You can read about the script that uses this file here https://confluence.sonos.com/display/PEOPLEPROD/Google+licenses+automation  The important part of this file are the numbers are used top down. Starting with
+
+Google Workspace Enterprise Plus
+Google Workspace Enterprise Plus - Archived User
+Google Workspace Business Starter
+
+Anything can change in this file BUT the order of the numbers.
+Simply edit this GIT file and update the numbers as new licenses are purchased.
+
+
+Google Workspace Enterprise Plus = 2160
+Google Workspace Enterprise Plus - Archived User = 1150
+Google Workspace Business Starter = 110
