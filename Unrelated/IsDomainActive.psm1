@@ -2,35 +2,36 @@
 This is my current favorite creation. A simple script that tries to find if there are the following DNS records A,MX,SPF,DMARC and DKIM.
 Run the script and enter the full domain name,an email address or entire URL.
 Examples:
-.\isdomainactive.ps1 -domain facebook.com
+.\get-domianrecords.ps1 -domain facebook.com
 switch -sub will test the subdomain
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub
 switch -selector will test dkim with the string provided
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -selector face
 switch -boolean will return simple true of false
-.\isdomainactive.ps1 -domain cnn.facebook.com -boolean
+.\get-domianrecords.ps1 -domain cnn.facebook.com -boolean
 examples:
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -boolean -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -sub -selector face
-.\isdomainactive.ps1 -domain cnn.facebook.com -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub -boolean -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub -boolean
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub -boolean -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -sub -selector face
+.\get-domianrecords.ps1 -domain cnn.facebook.com -selector face
 Results if any comes back as an object and on host.
 #>
-function IsDomainActive {
+function Get-DomainRecords {
     #Requires -Version 5.1
+    [Alias("IsDomainActive", "GDRS")]
     [CmdletBinding()]
     param (
         [parameter(Mandatory = $true,
-            HelpMessage = "Enter the full domain name. Example Facebook.com,enter an entire email address or enter full URL.")]
+            HelpMessage = "Enter the full domain name an example is Facebook.com,enter an entire email address or enter full URL.")]
         [ValidateScript({
                 if ($_ -like "*.*") {
                     return $true
                 }
                 else {
-                    Throw [System.Management.Automation.ValidationMetadataException] "Enter a domain name like facebook.com or an entire email address."
+                    Throw [System.Management.Automation.ValidationMetadataException] "Enter the full domain name an example is Facebook.com,enter an entire email address or enter full URL."
                 }
             })][string]$Domain,
         [parameter(Mandatory = $false,
@@ -38,7 +39,9 @@ function IsDomainActive {
         [parameter(Mandatory = $false,
             HelpMessage = "Return simple true or false for A,MX,SPF,DMARC and DKIM. DKIM needs -Selector to appear.")][switch]$Boolean,
         [parameter(Mandatory = $false,
-            HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked'
+            HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked',
+        [parameter(Mandatory = $false,
+            HelpMessage = "Looks for record type TXT or CNAME for SPF,DMARC and DKIM if -Selector is used. The default record type is TXT.")][string]$RecordType = 'TXT'
     )
     
     <#
@@ -46,6 +49,13 @@ function IsDomainActive {
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1
     Parts of this code were written by Jordan W.
     #>
+
+    $validValues = 'TXT', 'CNAME'
+    if ($validValues -notcontains $RecordType) {
+        Throw "-RecordType '$RecordType' is invalid. Valid record types are: -RecordType $($validValues -join ' or ')."
+    }
+
+    $RecordType = $RecordType.ToUpper()
     
     #if email address pull down to domain,uri pull down to domain and if not test domain
     $TestDomain = $null
@@ -64,7 +74,7 @@ function IsDomainActive {
     #Removes @
     If ([string]::IsNullOrWhiteSpace($TestDomain)) {
         Try { 
-            [string]$TestDomain = $Domain.Replace('@','').Trim()
+            [string]$TestDomain = $Domain.Replace('@', '').Trim()
         }
         Catch {
             Write-Error "Problem with $Domain as entered. Please see help."
@@ -74,29 +84,29 @@ function IsDomainActive {
     
     #get the last two items in the array and join them with dot
     if (-not $Sub.IsPresent) {
-        [string]$TestDomain = $TestDomain.Split(".")[-2,-1] -join "."
+        [string]$TestDomain = $TestDomain.Split(".")[-2, -1] -join "."
     }
     
-    #Allows a value other than true or false if dkim is selector is not provided.
+    #places a value other than true or false if dkim selector is not provided.
     $resultdkim = 'unchecked'
     
-    #default for if there is an A record at all.
+    #Returns true of false for A record.
     [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
     
-    #more detail on the return
+    #more detail on the return for SPF, DMARC and DKIM (If selector is provided)
     If ($Boolean.IsPresent) {
         if ($Selector -ne 'unchecked') {
-            [string]$resultdkim = If (Resolve-DnsName -Type 'TXT' -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
+            [string]$resultdkim = If (Resolve-DnsName -Type "$RECORDTYPE" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
         }
 
         [string]$resultmx = If (Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'mx' } ) { $true } Else { $false }
         
-        [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type 'TXT'-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
+        [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type "$RECORDTYPE"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
         
-        [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type 'TXT' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'txt' } ) { $true } Else { $false }
+        [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$RECORDTYPE" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq "$recordtype" } ) { $true } Else { $false }
     }
     Else {
-        $SPF = Resolve-DnsName -Name $TestDomain -Type 'TXT'-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
+        $SPF = Resolve-DnsName -Name $TestDomain -Type "$RECORDTYPE"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
         $resultspf = $false
         foreach ($Item in $SPf.strings) {
             if ($Item -match "v=spf1") {
@@ -110,24 +120,24 @@ function IsDomainActive {
         }
         Else {
             $Outmx = foreach ($record in $Mx) {
-                $record | Select-object @{n = "Name"; e = { $_.NameExchange } },@{n = "Pref"; e = { $_.Preference } },TTL
+                $record | Select-object @{n = "Name"; e = { $_.NameExchange } }, @{n = "Pref"; e = { $_.Preference } }, TTL
             }
             [string]$resultmx = ($Outmx | Out-String).trimend("`r`n").Trim()
         }
     
-        $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type 'TXT' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
+        $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$RECORDTYPE" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
         $resultdmarc = $false
         foreach ($Item in $DMARC) {
-            if ($Item.type -eq 'txt') {
+            if ($Item.type -eq "$recordtype") {
                 [string]$resultdmarc = $Item.Strings
             }
         }
        
         if ($Selector -ne 'unchecked') {
-            $DKIM = Resolve-DnsName -Type 'TXT' -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
+            $DKIM = Resolve-DnsName -Type "$RECORDTYPE" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
             $resultdkim = $false
             foreach ($Item in $DKIM) {
-                if ($Item.type -eq 'txt') {
+                if ($Item.type -eq "$recordtype") {
                     [string]$resultdkim = $Item.Strings
                 }
             }
@@ -136,12 +146,13 @@ function IsDomainActive {
     
     #Output
     Return [PSCustomObject]@{
-        A        = $resultA
-        MX       = $resultmx
-        SPF      = $resultspf
-        DMARC    = $resultdmarc
-        DKIM     = $resultdkim
-        Selector = $Selector
-        DOMAIN   = $TestDomain
+        A          = $resultA
+        MX         = $resultmx
+        SPF        = $resultspf
+        DMARC      = $resultdmarc
+        DKIM       = $resultdkim
+        SELECTOR   = $Selector
+        DOMAIN     = $TestDomain
+        RECORDTYPE = $RecordType
     }
 }
