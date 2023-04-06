@@ -32,6 +32,7 @@ function Get-DomainRecords {
                 }
                 else {
                     Throw [System.Management.Automation.ValidationMetadataException] "Enter the full domain name an example is Facebook.com,enter an entire email address or enter full URL."
+                    return $false
                 }
             })][string]$Domain,
         [parameter(Mandatory = $false,
@@ -41,19 +42,15 @@ function Get-DomainRecords {
         [parameter(Mandatory = $false,
             HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked',
         [parameter(Mandatory = $false,
-            HelpMessage = "Looks for record type TXT or CNAME for SPF,DMARC and DKIM if -Selector is used. The default record type is TXT.")][string]$RecordType = 'TXT'
+            HelpMessage = "Looks for record type TXT or CNAME or BOTH for SPF,DMARC and DKIM if -Selector is used. The default record type is TXT.")]
+        [ValidateSet('TXT', 'CNAME', 'BOTH')][string]$RecordType = 'TXT'
     )
     
     <#
-    ver 3,Author Dan Casmas 02/2023. Designed to work on Windows OS.
+    ver 5,Author Dan Casmas 04/2023. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1
     Parts of this code were written by Jordan W.
     #>
-
-    $validValues = 'TXT', 'CNAME'
-    if ($validValues -notcontains $RecordType) {
-        Throw "-RecordType '$RecordType' is invalid. Valid record types are: -RecordType $($validValues -join ' or ')."
-    }
 
     $RecordType = $RecordType.ToUpper()
     
@@ -89,70 +86,83 @@ function Get-DomainRecords {
     
     #places a value other than true or false if dkim selector is not provided.
     $resultdkim = 'unchecked'
-    
-    #Returns true of false for A record.
-    [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
-    
-    #more detail on the return for SPF, DMARC and DKIM (If selector is provided)
-    If ($Boolean.IsPresent) {
-        if ($Selector -ne 'unchecked') {
-            [string]$resultdkim = If (Resolve-DnsName -Type "$RECORDTYPE" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
-        }
 
-        [string]$resultmx = If (Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'mx' } ) { $true } Else { $false }
-        
-        [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type "$RECORDTYPE"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
-        
-        [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$RECORDTYPE" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq "$recordtype" } ) { $true } Else { $false }
+    #If Both then loop through.
+    $RecordTypeTest = @()
+    if ($RecordType -eq 'BOTH') {
+        $RecordTypeTest = @(
+            'TXT'
+            'CNAME'
+        )
     }
     Else {
-        $SPF = Resolve-DnsName -Name $TestDomain -Type "$RECORDTYPE"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
-        $resultspf = $false
-        foreach ($Item in $SPf.strings) {
-            if ($Item -match "v=spf1") {
-                [string]$resultspf = $Item
+        $RecordTypeTest = $RecordType
+    }
+    
+    $Output = $RecordTypeTest | ForEach-Object {
+        #Returns true or false for A record.
+        [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
+    
+        #more detail on the return for SPF, DMARC and DKIM (If selector is provided)
+        If ($Boolean.IsPresent) {
+            if ($Selector -ne 'unchecked') {
+                [string]$resultdkim = If (Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
             }
-        }
 
-        $Mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference -ErrorAction SilentlyContinue
-        if ([string]::IsNullOrWhiteSpace($Mx.NameExchange)) {
-            $resultmx = $false
+            [string]$resultmx = If (Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'mx' } ) { $true } Else { $false }
+        
+            [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type "$_"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
+        
+            [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq "$_" } ) { $true } Else { $false }
         }
         Else {
-            $Outmx = foreach ($record in $Mx) {
-                $record | Select-object @{n = "Name"; e = { $_.NameExchange } }, @{n = "Pref"; e = { $_.Preference } }, TTL
+            $SPF = Resolve-DnsName -Name $TestDomain -Type "$_"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+            $resultspf = $false
+            foreach ($Item in $SPf.strings) {
+                if ($Item -match "v=spf1") {
+                    [string]$resultspf = $Item
+                }
             }
-            [string]$resultmx = ($Outmx | Out-String).trimend("`r`n").Trim()
-        }
+
+            $Mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference 
+            if ([string]::IsNullOrWhiteSpace($Mx.NameExchange)) {
+                $resultmx = $false
+            }
+            Else {
+                $Outmx = foreach ($record in $Mx) {
+                    $record | Select-object @{n = "Name"; e = { $_.NameExchange } }, @{n = "Pref"; e = { $_.Preference } }, TTL
+                }
+                [string]$resultmx = ($Outmx | Out-String).trimend("`r`n").Trim()
+            }
     
-        $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$RECORDTYPE" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
-        $resultdmarc = $false
-        foreach ($Item in $DMARC) {
-            if ($Item.type -eq "$recordtype") {
-                [string]$resultdmarc = $Item.Strings
+            $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+            $resultdmarc = $false
+            foreach ($Item in $DMARC) {
+                if ($Item.type -eq "$_") {
+                    [string]$resultdmarc = $Item.Strings
+                }
             }
-        }
        
-        if ($Selector -ne 'unchecked') {
-            $DKIM = Resolve-DnsName -Type "$RECORDTYPE" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue
-            $resultdkim = $false
-            foreach ($Item in $DKIM) {
-                if ($Item.type -eq "$recordtype") {
-                    [string]$resultdkim = $Item.Strings
+            if ($Selector -ne 'unchecked') {
+                $DKIM = Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+                $resultdkim = $false
+                foreach ($Item in $DKIM) {
+                    if ($Item.type -eq "$_") {
+                        [string]$resultdkim = $Item.Strings
+                    }
                 }
             }
         }
-    }
-    
-    #Output
-    Return [PSCustomObject]@{
-        A          = $resultA
-        MX         = $resultmx
-        SPF        = $resultspf
-        DMARC      = $resultdmarc
-        DKIM       = $resultdkim
-        SELECTOR   = $Selector
-        DOMAIN     = $TestDomain
-        RECORDTYPE = $RecordType
-    }
+        [PSCustomObject]@{
+            A          = $resultA
+            MX         = $resultmx
+            "SPF_$_"   = $resultspf
+            "DMARC_$_" = $resultdmarc
+            "DKIM_$_"  = $resultdkim
+            SELECTOR   = $Selector
+            DOMAIN     = $TestDomain
+            RECORDTYPE = $_
+        } 
+    }   
+    Return $Output
 }
