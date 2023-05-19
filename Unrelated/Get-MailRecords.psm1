@@ -38,16 +38,18 @@ function Get-MailRecords {
         [parameter(Mandatory = $false,
             HelpMessage = "Allow subdomain. Example mail.facebook.com")][switch]$Sub,
         [parameter(Mandatory = $false,
-            HelpMessage = "Return simple true or false for A, MX, SPF, DMARC and DKIM. DKIM needs -Selector to appear.")][switch]$Boolean,
+            HelpMessage = "Return simple true or false for A, MX, SPF, DMARC and DKIM. DKIM needs -Selector to appear.")][switch]$Flag,
         [parameter(Mandatory = $false,
             HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked',
         [parameter(Mandatory = $false,
             HelpMessage = "Looks for record type TXT or CNAME or BOTH for SPF, DMARC and DKIM if -Selector is used. The default record type is TXT.")]
-        [ValidateSet('TXT', 'CNAME', 'BOTH')][string]$RecordType = 'TXT'
+        [ValidateSet('TXT', 'CNAME', 'BOTH')][string]$RecordType = 'TXT',
+        [parameter(Mandatory = $false,
+            HelpMessage = "Server to query the default is 8.8.8.8")][ValidateNotNullOrEmpty()][string]$Server = '8.8.8.8'
     )
-    
+
     <#
-    ver 5,Author Dan Casmas 04/2023. Designed to work on Windows OS.
+    ver 6,Author Dan Casmas 05/2023. Designed to work on Windows OS.
     Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1
     Parts of this code were written by Jordan W.
     #>
@@ -98,27 +100,27 @@ function Get-MailRecords {
     Else {
         $RecordTypeTest = $RecordType
     }
+
+    #Returns true or false for A record.
+    [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
     
-    $Output = $RecordTypeTest | ForEach-Object {
-        #Returns true or false for A record.
-        [string]$resultA = If (Resolve-DnsName -Name $TestDomain -Type 'A' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'a' } ) { $true } Else { $false }
-    
+    $Output = $RecordTypeTest | ForEach-Object {   
         #more detail on the return for SPF, DMARC and DKIM (If selector is provided)
-        If ($Boolean.IsPresent) {
+        If ($Flag) {
             if ($Selector -ne 'unchecked') {
-                [string]$resultdkim = If (Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
+                [string]$resultdkim = If (Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
             }
 
-            [string]$resultmx = If (Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'mx' } ) { $true } Else { $false }
+            [string]$resultmx = If (Resolve-DnsName -Name $TestDomain -Type 'MX' -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq 'mx' } ) { $true } Else { $false }
         
-            [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type "$_"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
+            [string]$resultspf = If (Resolve-DnsName -Name $TestDomain -Type "$_"-Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=spf1" } ) { $true } Else { $false }
             
             $DType = $null
             $DType = $_
-            [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq "$DType" } ) { $true } Else { $false }
+            [string]$resultDMARC = if (Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | Where-Object { $_.type -eq "$DType" } ) { $true } Else { $false }
         }
         Else {
-            $SPF = Resolve-DnsName -Name $TestDomain -Type "$_"-Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+            $SPF = Resolve-DnsName -Name $TestDomain -Type "$_"-Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
             $resultspf = $false
             foreach ($Item in $SPf.strings) {
                 if ($Item -match "v=spf1") {
@@ -126,7 +128,7 @@ function Get-MailRecords {
                 }
             }
 
-            $Mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference 
+            $Mx = Resolve-DnsName -Name $TestDomain -Type 'MX' -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | Sort-Object -Property Preference 
             if ([string]::IsNullOrWhiteSpace($Mx.NameExchange)) {
                 $resultmx = $false
             }
@@ -137,7 +139,7 @@ function Get-MailRecords {
                 [string]$resultmx = ($Outmx | Out-String).trimend("`r`n").Trim()
             }
     
-            $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+            $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
             $resultdmarc = $false
             foreach ($Item in $DMARC) {
                 if ($Item.type -eq "$_") {
@@ -146,7 +148,7 @@ function Get-MailRecords {
             }
        
             if ($Selector -ne 'unchecked') {
-                $DKIM = Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server '8.8.8.8' -DnsOnly -ErrorAction SilentlyContinue 
+                $DKIM = Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
                 $resultdkim = $false
                 foreach ($Item in $DKIM) {
                     if ($Item.type -eq "$_") {
@@ -155,6 +157,55 @@ function Get-MailRecords {
                 }
             }
         }
+
+        If ($RecordType -eq 'Both' -and ($resultdkim -eq 'unchecked' -or $resultdkim -eq $false )) {
+            if ($_ -eq 'TXT') {
+                $SelectorHold = $Selector
+            }
+            else {
+                $Selector = $SelectorHold
+            }
+        }
+    
+        If ($resultdkim -eq 'unchecked' -or $resultdkim -ne $false ) { 
+            $TempType = $null
+            $TempType = $_
+            $DkimSelectors = $null
+            $DkimSelectors = @(
+                'default'
+                's'
+                's1'
+                's2'
+                'selector1' # Microsoft
+                'selector2' # Microsoft
+                'google', # Google
+                'everlytickey1', # Everlytic
+                'everlytickey2', # Everlytic
+                'eversrv', # Everlytic OLD selector
+                'k1', # Mailchimp / Mandrill
+                'mxvault' # Global Micro
+                'dkim' # Hetzner
+            )
+
+            $DkimSelectors | ForEach-Object {
+                $DKIM = $null
+                $DKIM = Resolve-DnsName -Type "$TempType" -Name "$($_)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
+                foreach ($Item in $DKIM) {
+                    if ($Item.type -eq "TXT") {
+                        if ($Flag) {
+                            $resultdkim = $true
+                        }
+                        Else {
+                            [string]$resultdkim = $Item.Strings
+                        }
+                        $Selector = $_
+                        break
+                    }
+                    $Item = $null
+                }
+            }
+        }
+
         [PSCustomObject]@{
             A          = $resultA
             MX         = $resultmx
@@ -164,6 +215,7 @@ function Get-MailRecords {
             SELECTOR   = $Selector
             DOMAIN     = $TestDomain
             RECORDTYPE = $_
+            Server     = $Server
         } 
     }
     Return $Output
