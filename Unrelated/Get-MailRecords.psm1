@@ -31,7 +31,7 @@ function Get-MailRecords {
                     return $true
                 }
                 else {
-                    Throw [System.Management.Automation.ValidationMetadataException] "Enter the full domain name an example is Facebook.com, enter an entire email address or enter full URL."
+                    Throw [System.Management.Automation.ValidationMetadataException] "Enter the full domain name, an example is Facebook.com, enter an entire email address or enter full URL."
                     return $false
                 }
             })][string]$Domain,
@@ -76,7 +76,7 @@ function Get-MailRecords {
             [string]$TestDomain = $Domain.Replace('@', '').Trim()
         }
         Catch {
-            Write-Error "Problem with $Domain as entered. Please see help."
+            Write-Error "Problem with $Domain as entered. Please help."
             break script
         }
     }
@@ -125,6 +125,7 @@ function Get-MailRecords {
             foreach ($Item in $SPF) {
                 if ($Item.strings -match "v=spf1" -and $Null -ne $Item.Strings -and $Item.type -eq "$_") {
                     [string]$resultspf = $Item.Strings
+                    break
                 }
             }
 
@@ -144,6 +145,7 @@ function Get-MailRecords {
             foreach ($Item in $DMARC) {
                 if ($Item.type -eq "$_" -and $null -ne $Item.Strings -and $Item.strings -match "v=DMARC1") {
                     [string]$resultdmarc = $Item.Strings
+                    break
                 }
             }
        
@@ -151,8 +153,9 @@ function Get-MailRecords {
                 $DKIM = Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
                 $resultdkim = $false
                 foreach ($Item in $DKIM) {
-                    if ($Item.type -eq "$_" -and $null -ne $Item.Strings -and $Item.Strings -match "p=") {
+                    if ($Item.type -eq "$_" -and $null -ne $Item.Strings -and $Item.Strings -match "v=DKIM1") {
                         [string]$resultdkim = $Item.Strings
+                        break
                     }
                 }
             }
@@ -187,25 +190,30 @@ function Get-MailRecords {
                 'dkim' # Hetzner
             )
 
-            $DkimSelectors | ForEach-Object {
+            $line = $null
+            foreach ($line in $DkimSelectors) {
+                $Selector = $line
                 $DKIM = $null
-                $DKIM = Resolve-DnsName -Type "$TempType" -Name "$($_)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
+                $DKIM = Resolve-DnsName -Type "$TempType" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
                 foreach ($Item in $DKIM) {
-                    if ($Item.type -eq "TXT") {
+                    if ($Item.type -eq "$TempType" -and $null -ne $Item.Strings -and $Item.Strings -match "v=DKIM1") {
                         if ($Flag) {
                             $resultdkim = $true
                         }
                         Else {
                             [string]$resultdkim = $Item.Strings
                         }
-                        $Selector = $_
                         break
                     }
                     $Item = $null
                 }
+                        
+                If ($resultdkim -ne $false -and $resultdkim -ne 'unchecked') {
+                    break
+                }
+                $line = $null
             }
         }
-
         [PSCustomObject]@{
             A          = $resultA
             MX         = $resultmx
