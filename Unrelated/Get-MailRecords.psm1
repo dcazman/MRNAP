@@ -106,7 +106,7 @@ function Get-MailRecords {
     
     $Output = $RecordTypeTest | ForEach-Object {   
         #more detail on the return for SPF, DMARC and DKIM (If selector is provided)
-        If ($Flag) {
+        If ($Flag.IsPresent) {
             if ($Selector -ne 'unchecked') {
                 [string]$resultdkim = If (Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue | where-object { $_.strings -match "v=DKIM1" } ) { $true } Else { $false }
             }
