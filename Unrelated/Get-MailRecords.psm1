@@ -43,7 +43,7 @@ function Get-MailRecords {
             HelpMessage = "DKIM selector. DKIM won't be checked without this string.")][string]$Selector = 'unchecked',
         [parameter(Mandatory = $false,
             HelpMessage = "Looks for record type TXT or CNAME or BOTH for SPF, DMARC and DKIM if -Selector is used. The default record type is TXT.")]
-        [ValidateSet('TXT', 'CNAME', 'BOTH')][string]$RecordType = 'TXT',
+        [ValidateSet('TXT', 'CNAME', 'BOTH')][ValidateNotNullOrEmpty()][string]$RecordType = 'TXT',
         [parameter(Mandatory = $false,
             HelpMessage = "Server to query the default is 8.8.8.8")][ValidateNotNullOrEmpty()][string]$Server = '8.8.8.8'
     )
@@ -122,9 +122,9 @@ function Get-MailRecords {
         Else {
             $SPF = Resolve-DnsName -Name $TestDomain -Type "$_"-Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
             $resultspf = $false
-            foreach ($Item in $SPf.strings) {
-                if ($Item -match "v=spf1") {
-                    [string]$resultspf = $Item
+            foreach ($Item in $SPF) {
+                if ($Item -match "v=spf1" -and $Null -ne $Item.Strings -and $Item.type -eq "$_") {
+                    [string]$resultspf = $Item.Strings
                 }
             }
 
@@ -142,7 +142,7 @@ function Get-MailRecords {
             $DMARC = Resolve-DnsName -Name "_dmarc.$($TestDomain)" -Type "$_" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
             $resultdmarc = $false
             foreach ($Item in $DMARC) {
-                if ($Item.type -eq "$_") {
+                if ($Item.type -eq "$_" -and $null -ne $Item.Strings -and $Item -match "_dmarc") {
                     [string]$resultdmarc = $Item.Strings
                 }
             }
@@ -151,14 +151,14 @@ function Get-MailRecords {
                 $DKIM = Resolve-DnsName -Type "$_" -Name "$($Selector)._domainkey.$($TestDomain)" -Server "$Server" -DnsOnly -ErrorAction SilentlyContinue 
                 $resultdkim = $false
                 foreach ($Item in $DKIM) {
-                    if ($Item.type -eq "$_") {
+                    if ($Item.type -eq "$_" -and $null -ne $Item.Strings -and $Item -match "p=") {
                         [string]$resultdkim = $Item.Strings
                     }
                 }
             }
         }
 
-        If ($RecordType -eq 'Both' -and ($resultdkim -eq 'unchecked' -or $resultdkim -eq $false )) {
+        If ($RecordType -eq 'Both' -and ($resultdkim -eq 'unchecked' -or $resultdkim -eq $false)) {
             if ($_ -eq 'TXT') {
                 $SelectorHold = $Selector
             }
