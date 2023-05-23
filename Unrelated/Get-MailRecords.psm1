@@ -7,14 +7,14 @@ switch -sub will test the subdomain
 .\get-mailrecords.ps1 -domain cnn.facebook.com -sub
 switch -selector will test dkim with the string provided
 .\get-mailrecords.ps1 -domain cnn.facebook.com -selector face
-switch -boolean will return simple true of false
-.\get-mailrecords.ps1 -domain cnn.facebook.com -boolean
+switch -flag will return simple true of false
+.\get-mailrecords.ps1 -domain cnn.facebook.com -flag
 examples:
-.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -boolean -selector face
+.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -flag -selector face
 .\get-mailrecords.ps1 -domain cnn.facebook.com -sub -selector face
 .\get-mailrecords.ps1 -domain cnn.facebook.com -selector face
-.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -boolean
-.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -boolean -selector face
+.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -flag
+.\get-mailrecords.ps1 -domain cnn.facebook.com -sub -flag -selector face
 .\get-mailrecords.ps1 -domain cnn.facebook.com -sub -selector face
 .\get-mailrecords.ps1 -domain cnn.facebook.com -selector face
 Results if any comes back as an object and on host.
