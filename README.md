@@ -1,2 +1,6 @@
 # MRNAP
-Mold Report Name And Path function. Options include report name, directory, no date and time, no seconds with date time, utc time, just the date, extension and finally no separators. The extension default is .csv and the default directory is C:\Reports. Additionally -move will try to move out file(s) of similar ReportName to a nested directory. Example of the default is C:\Reports. The nested default directory is C:\Reports\old. Author Dan Casmas 7/2021. Designed to work on Windows OS. Has only been tested with 5.1 and 7 PS Versions. Requires a minimum of PS 5.1
+Mold Report Name And Path function.T he MRNAP function creates a file path for a report based on various options and parameters.
+The function allows customization of the report name, destination directory, file extension, and various time-related options.
+It can also move similar files to an "old" directory if the Move switch is specified. 
+The extension default is .csv and the default directory is C:\Reports. The nested default directory is C:\Reports\old. 
+Author Dan Casmas 7/2021. Designed to work on Windows OS. Has only been tested with PS 5.1. Requires a minimum of PS 5.1
