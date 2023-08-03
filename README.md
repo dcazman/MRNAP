@@ -1,5 +1,5 @@
 # MRNAP
-Mold Report Name And Path function.T he MRNAP function creates a file path for a report based on various options and parameters.
+Mold Report Name And Path function. The MRNAP function creates a file path for a report based on various options and parameters.
 The function allows customization of the report name, destination directory, file extension, and various time-related options.
 It can also move similar files to an "old" directory if the Move switch is specified. 
 The extension default is .csv and the default directory is C:\Reports. The nested default directory is C:\Reports\old. 
