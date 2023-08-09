@@ -103,24 +103,38 @@ function MRNAP {
             Write-Warning 'ReportName needs a value to use the NoDateTimeSeconds switch.'
             return $null
         }
+         
         $FullPath = Join-AnyPath $DirectoryName $ReportNameExt
     }
     else {
+        # General timestamp
         $timestampFormat = "yyyy_MM_ddTHHmmss-"
+
+        # just date timestamp
         if ($JustDate) {
             $timestampFormat = "yyyy_MM_dd-"
         }
         elseif ($NoSeconds) {
+            # no seconds timestamp
             $timestampFormat = "yyyy_MM_ddTHHmm-"
         }
 
-        $timestamp = Get-Date -Format $timestampFormat
+        # convert to utc or standard
         if ($UTC) {
-            $timestamp += "Z"
+            $timestamp = (Get-Date).ToUniversalTime().ToString($timestampFormat)
+        }
+        else {
+            $timestamp = Get-Date -Format $timestampFormat
         }
 
+        # removes sepeartors
         if ($NoSeparators) {
             $timestamp = ($timestamp -replace "_", "" -replace "-", "")
+        }
+
+        # Removed trailing dash if no reportname
+        if ($EmptyReportNameFlag) {
+            $timestamp = ($timestamp -replace "-", "")
         }
 
         $FullPath = Join-AnyPath $DirectoryName "$timestamp$ReportNameExt"
