@@ -6,34 +6,37 @@
     This script generates a report file name and path based on the provided parameters. It supports options for specifying the report name, directory, file extension, timestamp format, and more. The script can also move existing similar files to an 'old' directory if specified.
 
 .PARAMETER ReportName
-    The name of the report. If not specified, a random word will be used.
+    The name of the report. If not specified, a random word will be used. Alias: RN.
 
 .PARAMETER DirectoryName
-    The destination directory where the report file will be stored. Default is the user's home directory.
+    The destination directory where the report file will be stored. Default is the user's home directory. Alias DN.
 
 .PARAMETER Extension
-    The file extension for the report file. The default value is 'csv'.
+    The file extension for the report file. The default value is 'csv'. Alias: EXT, E.
 
 .PARAMETER NoDateTimeSeconds
-    Exclude the timestamp in the file name.
+    Exclude the timestamp in the file name. Alias: NODTS.
 
 .PARAMETER UTC
     Use Coordinated Universal Time (UTC) for the timestamp in the file name.
 
 .PARAMETER NoSeparators
-    Do not use separators (underscores and dashes) in the timestamp.
+    Do not use separators (underscores and dashes) in the timestamp. Alias: NoSep.
 
 .PARAMETER NoSeconds
-    Exclude seconds from the timestamp.
+    Exclude seconds from the timestamp. Alias: NoSec.
 
 .PARAMETER AddTime
-    Include time in the timestamp.
+    Include time in the timestamp. Alias: AT.
 
 .PARAMETER NoDate
-    Exclude the date in the file name.
+    Exclude the date in the file name. Alias ND.
 
 .PARAMETER Move
-    Move similar files to an 'old' directory if similar files exist.
+    Move similar files to an 'old' directory if similar files exist. Alias M.
+
+.LINK
+    https://github.com/dcazman/MRNAP
 
 .EXAMPLE
     MRNAP -ReportName "SalesReport" -DirectoryName "C:\Reports" -Extension "txt" -UTC -AddTime -Move
@@ -54,7 +57,7 @@ function MRNAP {
     #Requires -Version 5.1
     [CmdletBinding()]
     param (
-        [parameter(Position = 0, Mandatory = $False, HelpMessage = "The name of the report. If not specified, a random word will be used.")]
+        [parameter(Position = 0, Mandatory = $False, ValueFromPipeline = $True, HelpMessage = "The name of the report. If not specified, a random word will be used.")]
         [Alias("RN")][string]$ReportName,
 
         [parameter(Position = 1, Mandatory = $False, HelpMessage = "The destination directory where the report file will be stored. Default is the user's home directory.")]
@@ -85,109 +88,140 @@ function MRNAP {
         [Alias("M")][switch]$Move
     )
 
-    # Function to get a random word
-    function GetRandomWord {
-        $Words = @(
-            'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Dog', 'Echo', 'Ethan', 
-            'Foxtrot', 'Golf', 'Hotel', 'India', 'January', 'Juliet', 'Kathie', 'Kilo', 
-            'Lima', 'Mat', 'March', 'November', 'October', 'Oscar', 'Phil', 'Quebec', 'Romeo', 
-            'September', 'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo', 
-            'Zachary', 'Zulu'
-        )
-        return Get-Random -InputObject $Words
-    }
+    process {
+        # Function to create a name for the report
+        function CreateName {
+            try {
+                # Function to get the script name
+                function GetScriptName {
+                    try {
+                        $scriptName = [System.IO.Path]::GetFileName($MyInvocation.MyCommand.Path)
+                        return $scriptName
+                    }
+                    catch {
+                        return $null
+                    }
+                }
 
-    # Set default report name if not provided
-    if ([string]::IsNullOrWhiteSpace($ReportName)) {
-        $ReportName = GetRandomWord
-    }
+                # Function to get a random word
+                function GetRandomWord {
+                    $Words = @(
+                        'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Echo', 'Ethan', 
+                        'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet', 'Kathie', 'Kilo', 
+                        'Lima', 'Mat', 'November', 'Oscar', 'Phil', 'Quebec', 'Romeo', 
+                        'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo', 
+                        'Zachary', 'Zulu'
+                    )
+                    return Get-Random -InputObject $Words
+                }
 
-    # Set default directory name if not provided
-    if ([string]::IsNullOrWhiteSpace($DirectoryName)) {
-        $DirectoryName = [IO.Path]::Combine($HOME, "Reports")
-    }
+                $ScriptName = GetScriptName
 
-    # Ensure the extension starts with a dot
-    if (-not $Extension.StartsWith(".")) {
-        $Extension = ".$Extension"
-    }
+                if ([string]::IsNullOrWhiteSpace($ScriptName)) {
+                    return GetRandomWord
+                }
+                else {
+                    return $ScriptName -replace '\.[^.]+$', ''
+                }
+            }
+            catch {
+                Write-Error $_.Exception.Message
+                exit 11
+            }
+        }
 
-    # Build the basic report name with extension
-    $ReportNameExt = "$ReportName$Extension"
+        # Set default report name if not provided
+        if ([string]::IsNullOrWhiteSpace($ReportName)) {
+            $ReportName = CreateName
+        }
 
-    # Function to join paths in a platform-independent way
-    function Join-AnyPath {
-        return ($Args -join [IO.Path]::DirectorySeparatorChar) -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
-    }
+        # Set default directory name if not provided
+        if ([string]::IsNullOrWhiteSpace($DirectoryName)) {
+            $DirectoryName = [IO.Path]::Combine($HOME, "Reports")
+        }
 
-    If (-not $NoDateTimeSeconds) {
+        # Ensure the extension starts with a dot
+        if (-not $Extension.StartsWith(".")) {
+            $Extension = ".$Extension"
+        }
+
+        # Build the basic report name with extension
+        $ReportNameExt = "$ReportName$Extension"
+
+        # Function to join paths in a platform-independent way
+        function Join-AnyPath {
+            return ($Args -join [IO.Path]::DirectorySeparatorChar) -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
+        }
+
         # Format the timestamp based on the specified options
-        $timestampFormat = "yyyy_MM_dd-"
+        if (-not $NoDateTimeSeconds) {
+            $timestampFormat = "yyyy_MM_dd-"
 
-        if ($AddTime) {
-            $timestampFormat = "yyyy_MM_ddTHHmmss-"
-        }
-        elseif ($NoSeconds) {
-            $timestampFormat = "yyyy_MM_ddTHHmm-"
-        }
+            if ($AddTime) {
+                $timestampFormat = "yyyy_MM_ddTHHmmss-"
+            }
+            elseif ($NoSeconds) {
+                $timestampFormat = "yyyy_MM_ddTHHmm-"
+            }
 
-        if ($UTC) {
-            $timestamp = if ($NoDate) {
-            (Get-Date).ToUniversalTime().ToString("HHmmss-")
+            if ($UTC) {
+                $timestamp = if ($NoDate) {
+                    (Get-Date).ToUniversalTime().ToString("HHmmss-")
+                }
+                else {
+                    (Get-Date).ToUniversalTime().ToString($timestampFormat)
+                }
             }
             else {
-            (Get-Date).ToUniversalTime().ToString($timestampFormat)
+                $timestamp = if ($NoDate) {
+                    $null
+                }
+                else {
+                    Get-Date -Format $timestampFormat
+                }
             }
-        }
-        else {
-            $timestamp = if ($NoDate) {
-                $null
-            }
-            else {
-                Get-Date -Format $timestampFormat
+
+            if ($NoSeparators) {
+                $timestamp = $timestamp -replace "_", "" -replace "-", ""
             }
         }
 
-        if ($NoSeparators) {
-            $timestamp = $timestamp -replace "_", "" -replace "-", ""
+        # Build the full file path
+        $FullPath = Join-AnyPath $DirectoryName "$timestamp$ReportNameExt"
+
+        # Move simular files to "old" directory if specified
+        if ($Move) {
+            if (-not (Test-Path $DirectoryName)) {
+                try {
+                    New-Item -ItemType Directory -Path $DirectoryName -Force -ErrorAction Stop
+                }
+                catch {
+                    Write-Warning "Unable to create directory $DirectoryName"
+                }
+            }
+            
+            $oldDirectory = Join-AnyPath $DirectoryName "old"
+            $dirflag = $true
+            if (-not (Test-Path $oldDirectory)) {
+                try {
+                    New-Item -ItemType Directory -Path $oldDirectory -Force -ErrorAction Stop
+                }
+                catch {
+                    Write-Warning "Unable to create directory and move any related files to $oldDirectory"
+                    $dirflag = $false
+                }
+            }
+
+            if ($dirflag) {
+                try {
+                    Get-ChildItem -Path $DirectoryName -Filter "*$ReportNameExt" -File -ErrorAction Stop -Force | Move-Item -Destination $oldDirectory -ErrorAction Stop -Force
+                }
+                catch {
+                    Write-Warning "Problem moving files to $oldDirectory."
+                }
+            }
         }
+
+        return [string]$FullPath
     }
-
-    # Build the full file path
-    $FullPath = Join-AnyPath $DirectoryName "$timestamp$ReportNameExt"
-
-    # Move files to "old" directory if specified
-    if ($Move) {
-        if (-not (Test-Path $DirectoryName)) {
-            try {
-                New-Item -ItemType Directory -Path $DirectoryName -Force -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "Unable to create directory $DirectoryName"
-            }
-        }
-        
-        $oldDirectory = Join-AnyPath $DirectoryName "old"
-        $dirflag = $true
-        if (-not (Test-Path $oldDirectory)) {
-            try {
-                New-Item -ItemType Directory -Path $oldDirectory -Force -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "Unable to create directory and move any related files to $oldDirectory"
-                $dirflag = $false
-            }
-        }
-
-        if ($dirflag) {
-            try {
-                Get-ChildItem -Path $DirectoryName -Filter "*$ReportNameExt" -File -ErrorAction Stop -Force | Move-Item -Destination $oldDirectory -ErrorAction Stop -Force
-            }
-            catch {
-                Write-Warning "Problem moving files to $oldDirectory."
-            }
-        }
-    }
-
-    return [string]$FullPath
 }
