@@ -6,7 +6,7 @@
     This script generates a report file name and path based on the provided parameters. It supports options for specifying the report name, directory, file extension, timestamp format, and more. The script can also move existing similar files to an 'old' directory if specified.
 
 .PARAMETER ReportName
-    The name of the report. If not specified, a random word will be used. Alias: RN.
+    The name of the report. If not specified, a random word or script name will be used. Alias: RN.
 
 .PARAMETER DirectoryName
     The destination directory where the report file will be stored. Default is the user's home directory. Alias DN.
@@ -24,7 +24,7 @@
     Do not use separators (underscores and dashes) in the timestamp. Alias: NoSep.
 
 .PARAMETER NoSeconds
-    Exclude seconds from the timestamp. Alias: NoSec.
+    Exclude seconds from the timestamp. Alias: NoSec, NS.
 
 .PARAMETER AddTime
     Include time in the timestamp. Alias: AT.
@@ -48,7 +48,7 @@
 
 .NOTES
     Author: Dan Casmas
-    Version: 9
+    Version: 9.2
     Date: 1/2025
     Designed to work on Windows, Linux, and macOS. Tested with PowerShell 5.1 and 7.
 #>
@@ -57,7 +57,7 @@ function MRNAP {
     #Requires -Version 5.1
     [CmdletBinding()]
     param (
-        [parameter(Position = 0, Mandatory = $False, ValueFromPipeline = $True, HelpMessage = "The name of the report. If not specified, a random word will be used.")]
+        [parameter(Position = 0, Mandatory = $False, ValueFromPipeline = $True, HelpMessage = "The name of the report. If not specified, a random word or script name will be used.")]
         [Alias("RN")][string]$ReportName,
 
         [parameter(Position = 1, Mandatory = $False, HelpMessage = "The destination directory where the report file will be stored. Default is the user's home directory.")]
@@ -76,7 +76,7 @@ function MRNAP {
         [Alias("NoSep")][switch]$NoSeparators,
 
         [parameter(Mandatory = $False, HelpMessage = "Exclude seconds from the timestamp.")]
-        [Alias("NoSec")][switch]$NoSeconds,
+        [Alias("NoSec", "NS")][switch]$NoSeconds,
 
         [parameter(Mandatory = $False, HelpMessage = "Include time in the timestamp.")]
         [Alias("AT")][switch]$AddTime,
@@ -154,6 +154,7 @@ function MRNAP {
         }
 
         # Format the timestamp based on the specified options
+        # Format the timestamp based on the specified options
         if (-not $NoDateTimeSeconds) {
             $timestampFormat = "yyyy_MM_dd-"
 
@@ -165,22 +166,29 @@ function MRNAP {
             }
 
             if ($UTC) {
-                $timestamp = if ($NoDate) {
-                    (Get-Date).ToUniversalTime().ToString("HHmmss-")
+                # Handle UTC formatting for NoDate case
+                if ($NoDate) {
+                    $timestamp = (Get-Date).ToUniversalTime().ToString("HHmmss-")  # Only time in UTC, no date
                 }
                 else {
-                    (Get-Date).ToUniversalTime().ToString($timestampFormat)
+                    $timestampFormat = "yyyy_MM_ddTHHmmss-"
+                    if ($NoSeconds) {
+                        $timestampFormat = "yyyy_MM_ddTHHmm-"
+                    }
+                    $timestamp = (Get-Date).ToUniversalTime().ToString($timestampFormat)  # Full date and time in UTC
                 }
             }
             else {
-                $timestamp = if ($NoDate) {
-                    $null
+                # Handle local time formatting
+                if ($NoDate) {
+                    $timestamp = (Get-Date).ToString("HHmmss-")  # Local time with no date
                 }
                 else {
-                    Get-Date -Format $timestampFormat
+                    $timestamp = Get-Date -Format $timestampFormat  # Full date and time in local time
                 }
             }
 
+            # Handle separators if needed
             if ($NoSeparators) {
                 $timestamp = $timestamp -replace "_", "" -replace "-", ""
             }
@@ -189,7 +197,7 @@ function MRNAP {
         # Build the full file path
         $FullPath = Join-AnyPath $DirectoryName "$timestamp$ReportNameExt"
 
-        # Move simular files to "old" directory if specified
+        # Move files to "old" directory if specified
         if ($Move) {
             if (-not (Test-Path $DirectoryName)) {
                 try {
