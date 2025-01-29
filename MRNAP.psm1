@@ -15,7 +15,7 @@
     The file extension for the report file. The default value is 'csv'. Alias: EXT, E.
 
 .PARAMETER NoDateTimeSeconds
-    Exclude the timestamp in the file name. Alias: NODTS.
+    Exclude the timestamp in the file name. Alias: NODTS, N.
 
 .PARAMETER UTC
     Use Coordinated Universal Time (UTC) for the timestamp in the file name.
@@ -32,6 +32,9 @@
 .PARAMETER NoDate
     Exclude the date in the file name. Alias ND.
 
+.PARAMETER JustDate
+    Include only the date in the file name. Alias JD.
+
 .PARAMETER Move
     Move similar files to an 'old' directory if similar files exist. Alias M.
 
@@ -46,9 +49,17 @@
     MRNAP -ReportName "MonthlyReport" -UTC -NoSeparators
     Generates a file path with name "MonthlyReport" using UTC time and without separators.
 
+.EXAMPLE
+    MRNAP -NoDateTimeSeconds
+    Generates a filename and file path with no timestamp
+
+.EXAMPLE
+    $output | MRNAP
+    Generates a filename and file path.
+
 .NOTES
     Author: Dan Casmas
-    Version: 9.2
+    Version: 9.3
     Date: 1/2025
     Designed to work on Windows, Linux, and macOS. Tested with PowerShell 5.1 and 7.
 #>
@@ -67,7 +78,7 @@ function MRNAP {
         [Alias("EXT", "E")][string]$Extension = "csv",
 
         [parameter(Mandatory = $False, HelpMessage = "Exclude the timestamp in the file name.")]
-        [Alias("NODTS")][switch]$NoDateTimeSeconds,
+        [Alias("NODTS", "N")][switch]$NoDateTimeSeconds,
 
         [parameter(Mandatory = $False, HelpMessage = "Use Coordinated Universal Time (UTC) for the timestamp in the file name.")]
         [switch]$UTC,
@@ -83,6 +94,9 @@ function MRNAP {
 
         [parameter(Mandatory = $False, HelpMessage = "Exclude the date in the file name.")]
         [Alias("ND")][switch]$NoDate,
+
+        [parameter(Mandatory = $False, HelpMessage = "Exclude the date in the file name.")]
+        [Alias("JD")][switch]$JustDate,
 
         [parameter(Mandatory = $False, HelpMessage = "Move similar files to an 'old' directory if similar files exist.")]
         [Alias("M")][switch]$Move
@@ -131,7 +145,7 @@ function MRNAP {
         }
 
         # Set default report name if not provided
-        if ([string]::IsNullOrWhiteSpace($ReportName)) {
+        if ([string]::IsNullOrWhiteSpace($ReportName) -and -not $AddTime -and -not $JustDate) {
             $ReportName = CreateName
         }
 
@@ -164,10 +178,16 @@ function MRNAP {
             elseif ($NoSeconds) {
                 $timestampFormat = "yyyy_MM_ddTHHmm-"
             }
+            elseif ($JustDate) {
+                   $timestampFormat = "yyyy_MM_dd"
+            }
 
             if ($UTC) {
                 # Handle UTC formatting for NoDate case
-                if ($NoDate) {
+                if ($JustDate) {
+                    $timestamp = (Get-Date).ToUniversalTime().ToString($timestampFormat)  # Only date in UTC
+                }
+                elseif ($NoDate) {
                     $timestamp = (Get-Date).ToUniversalTime().ToString("HHmmss-")  # Only time in UTC, no date
                 }
                 else {
@@ -182,6 +202,9 @@ function MRNAP {
                 # Handle local time formatting
                 if ($NoDate) {
                     $timestamp = (Get-Date).ToString("HHmmss-")  # Local time with no date
+                }
+                elseif ($JustDate) {
+                    $timestamp = (Get-Date).ToString($timestampFormat)
                 }
                 else {
                     $timestamp = Get-Date -Format $timestampFormat  # Full date and time in local time
