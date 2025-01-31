@@ -21,7 +21,7 @@
     Use Coordinated Universal Time (UTC) for the timestamp in the file name.
 
 .PARAMETER NoSeparators
-    Do not use separators (underscores and dashes) in the timestamp. Alias: NoSep.
+    Do not use separators (underscores and dashes) in the timestamp. Alias: NoSep, NX
 
 .PARAMETER NoSeconds
     Exclude seconds from the timestamp. Alias: NoSec, NS.
@@ -33,33 +33,41 @@
     Exclude the date in the file name. Alias ND.
 
 .PARAMETER JustDate
-    Include only the date in the file name. Alias JD.
+    Include only the date in the file name. No filename or words just the date. Alias JD.
 
 .PARAMETER Move
-    Move similar files to an 'old' directory if similar files exist. Alias M.
+    Move files to an 'old' directory if files exist in destination directory. Alias M.
 
 .LINK
     https://github.com/dcazman/MRNAP
 
 .EXAMPLE
-    MRNAP -ReportName "SalesReport" -DirectoryName "C:\Reports" -Extension "txt" -UTC -AddTime -Move
-    Generates a report file name and path with the specified options and moves existing similar files to an 'old' directory.
+    MRNAP -ReportName "SalesReport" -DirectoryName "C:\Apple" -Extension "txt" -UTC -Move
+    Generates a report file name and path with the specified options and moves existing files to an 'old' directory.
+    Result C:\Apple\2025_01_01-SalesReport.txt
 
 .EXAMPLE
     MRNAP -ReportName "MonthlyReport" -UTC -NoSeparators
     Generates a file path with name "MonthlyReport" using UTC time and without separators.
+    Result: C:\Users\<UN>\Reports\2025_01_01T120000MonthlyReport.csv
 
 .EXAMPLE
     MRNAP -NoDateTimeSeconds
     Generates a filename and file path with no timestamp
+    Result: C:\Users\<UN>\Reports\<ScriptName>.csv
+    or 
+    Result: C:\Users\<UN>\Reports\<RandomWord>.csv
 
 .EXAMPLE
     $output | MRNAP
     Generates a filename and file path.
+    Result: C:\Users\<UN>\Reports\2025_01_01-<ScriptName>.csv
+    or 
+    Result: C:\Users\<UN>\Reports\2025_01_01-<RandomWord>.csv
 
 .NOTES
     Author: Dan Casmas
-    Version: 9.3
+    Version: 9.5
     Date: 1/2025
     Designed to work on Windows, Linux, and macOS. Tested with PowerShell 5.1 and 7.
 #>
@@ -84,7 +92,7 @@ function MRNAP {
         [switch]$UTC,
 
         [parameter(Mandatory = $False, HelpMessage = "Do not use separators (underscores and dashes).")]
-        [Alias("NoSep")][switch]$NoSeparators,
+        [Alias("NoSep", "NX")][switch]$NoSeparators,
 
         [parameter(Mandatory = $False, HelpMessage = "Exclude seconds from the timestamp.")]
         [Alias("NoSec", "NS")][switch]$NoSeconds,
@@ -95,7 +103,7 @@ function MRNAP {
         [parameter(Mandatory = $False, HelpMessage = "Exclude the date in the file name.")]
         [Alias("ND")][switch]$NoDate,
 
-        [parameter(Mandatory = $False, HelpMessage = "Exclude the date in the file name.")]
+        [parameter(Mandatory = $False, HelpMessage = "Only the date in file name.")]
         [Alias("JD")][switch]$JustDate,
 
         [parameter(Mandatory = $False, HelpMessage = "Move similar files to an 'old' directory if similar files exist.")]
@@ -103,55 +111,50 @@ function MRNAP {
     )
 
     process {
-        # Function to create a name for the report
-        function CreateName {
-            try {
-                # Function to get the script name
-                function GetScriptName {
-                    try {
-                        $scriptName = [System.IO.Path]::GetFileName($MyInvocation.MyCommand.Path)
-                        return $scriptName
-                    }
-                    catch {
-                        return $null
-                    }
+        function GetScriptName {
+            Try {
+                $callStack = Get-PSCallStack
+                if ($callStack.Location -eq "<No file>") {
+                    return $null  # Running interactively, return nothing
                 }
-
-                # Function to get a random word
-                function GetRandomWord {
-                    $Words = @(
-                        'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Echo', 'Ethan', 
-                        'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet', 'Kathie', 'Kilo', 
-                        'Lima', 'Mat', 'November', 'Oscar', 'Phil', 'Quebec', 'Romeo', 
-                        'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo', 
-                        'Zachary', 'Zulu'
-                    )
-                    return Get-Random -InputObject $Words
-                }
-
-                $ScriptName = GetScriptName
-
-                if ([string]::IsNullOrWhiteSpace($ScriptName)) {
-                    return GetRandomWord
-                }
-                else {
-                    return $ScriptName -replace '\.[^.]+$', ''
-                }
+                return $callStack[2].Location  # Get the outermost script location
             }
             catch {
-                Write-Error $_.Exception.Message
-                exit 11
+                return $null
             }
         }
 
+        # Function to get a random word
+        function GetRandomWord {
+            $Words = @(
+                'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Echo', 'Ethan', 
+                'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet', 'Kathie', 'Kilo', 
+                'Lima', 'Mat', 'November', 'Oscar', 'Phil', 'Quebec', 'Romeo', 
+                'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo', 
+                'Zachary', 'Zulu'
+            )
+            return Get-Random -InputObject $Words
+        }
+
         # Set default report name if not provided
-        if ([string]::IsNullOrWhiteSpace($ReportName) -and -not $AddTime -and -not $JustDate) {
-            $ReportName = CreateName
+        if ([string]::IsNullOrWhiteSpace($ReportName) -and (-not $JustDate -or ($JustDate -and $NoDateTimeSeconds))) {
+            $ScriptName = GetScriptName
+            if ([string]::IsNullOrWhiteSpace($ScriptName)) {
+                $ReportName = GetRandomWord
+            }
+            else {
+                $ReportName = $ScriptName -replace '\.[^.]+$', ''
+            }
         }
 
         # Set default directory name if not provided
         if ([string]::IsNullOrWhiteSpace($DirectoryName)) {
             $DirectoryName = [IO.Path]::Combine($HOME, "Reports")
+        }
+        elseif (-not $DirectoryName.Contains(":")) {
+            if (-not $DirectoryName.StartsWith([IO.Path]::DirectorySeparatorChar)) {
+                $DirectoryName = [IO.Path]::DirectorySeparatorChar + $DirectoryName
+            }
         }
 
         # Ensure the extension starts with a dot
@@ -168,7 +171,6 @@ function MRNAP {
         }
 
         # Format the timestamp based on the specified options
-        # Format the timestamp based on the specified options
         if (-not $NoDateTimeSeconds) {
             $timestampFormat = "yyyy_MM_dd-"
 
@@ -179,7 +181,7 @@ function MRNAP {
                 $timestampFormat = "yyyy_MM_ddTHHmm-"
             }
             elseif ($JustDate) {
-                   $timestampFormat = "yyyy_MM_dd"
+                $timestampFormat = "yyyy_MM_dd"
             }
 
             if ($UTC) {
@@ -210,11 +212,11 @@ function MRNAP {
                     $timestamp = Get-Date -Format $timestampFormat  # Full date and time in local time
                 }
             }
+        }
 
-            # Handle separators if needed
-            if ($NoSeparators) {
-                $timestamp = $timestamp -replace "_", "" -replace "-", ""
-            }
+        # Handle separators if needed
+        if ($NoSeparators) {
+            $timestamp = $timestamp -replace "_", "" -replace "-", ""
         }
 
         # Build the full file path
@@ -222,33 +224,38 @@ function MRNAP {
 
         # Move files to "old" directory if specified
         if ($Move) {
+            $dirFlag = $false
             if (-not (Test-Path $DirectoryName)) {
                 try {
-                    New-Item -ItemType Directory -Path $DirectoryName -Force -ErrorAction Stop
+                    New-Item -ItemType Directory -Path $DirectoryName -Force -ErrorAction Stop | Out-Null
+                    $dirFlag = $true
                 }
                 catch {
                     Write-Warning "Unable to create directory $DirectoryName"
                 }
             }
             
-            $oldDirectory = Join-AnyPath $DirectoryName "old"
-            $dirflag = $true
-            if (-not (Test-Path $oldDirectory)) {
-                try {
-                    New-Item -ItemType Directory -Path $oldDirectory -Force -ErrorAction Stop
-                }
-                catch {
-                    Write-Warning "Unable to create directory and move any related files to $oldDirectory"
-                    $dirflag = $false
-                }
-            }
+            If (-not $dirFlag) {
+                $items = Get-ChildItem -Path $DirectoryName -Filter $ReportNameExt -File -ErrorAction Stop -Force
 
-            if ($dirflag) {
-                try {
-                    Get-ChildItem -Path $DirectoryName -Filter "*$ReportNameExt" -File -ErrorAction Stop -Force | Move-Item -Destination $oldDirectory -ErrorAction Stop -Force
-                }
-                catch {
-                    Write-Warning "Problem moving files to $oldDirectory."
+                if ($items.count -gt 0) {
+                    $oldDirectory = Join-AnyPath $DirectoryName "old"
+
+                    if (-not (Test-Path $oldDirectory)) {
+                        try {
+                            New-Item -ItemType Directory -Path $oldDirectory -Force -ErrorAction Stop | Out-Null
+                        }
+                        catch {
+                            Write-Warning "Unable to create directory and move any related files to $oldDirectory"
+                        }
+                    }
+
+                    try {
+                        $items | Move-Item -Destination $oldDirectory -ErrorAction Stop -Force | Out-Null
+                    }
+                    catch {
+                        Write-Warning "Problem moving files to $oldDirectory."
+                    }
                 }
             }
         }
