@@ -224,18 +224,15 @@ function MRNAP {
 
         # Move files to "old" directory if specified
         if ($Move) {
-            $dirFlag = $false
             if (-not (Test-Path $DirectoryName)) {
                 try {
                     New-Item -ItemType Directory -Path $DirectoryName -Force -ErrorAction Stop | Out-Null
-                    $dirFlag = $true
                 }
                 catch {
                     Write-Warning "Unable to create directory $DirectoryName"
                 }
             }
-            
-            If (-not $dirFlag) {
+            Else {
                 $items = Get-ChildItem -Path $DirectoryName -Filter $ReportNameExt -File -ErrorAction Stop -Force
 
                 if ($items.count -gt 0) {
