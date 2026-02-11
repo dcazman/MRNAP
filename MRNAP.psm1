@@ -165,11 +165,6 @@ function MRNAP {
         # Build the basic report name with extension
         $ReportNameExt = "$ReportName$Extension"
 
-        # Function to join paths in a platform-independent way
-        function Join-AnyPath {
-            return ($Args -join [IO.Path]::DirectorySeparatorChar) -replace '(?!^)([\\/])+', [IO.Path]::DirectorySeparatorChar
-        }
-
         # Format the timestamp based on the specified options
         if (-not $NoDateTimeSeconds) {
             $timestampFormat = "yyyy_MM_dd-"
@@ -220,7 +215,7 @@ function MRNAP {
         }
 
         # Build the full file path
-        $FullPath = Join-AnyPath $DirectoryName "$timestamp$ReportNameExt"
+        $FullPath = Join-Path $DirectoryName "$timestamp$ReportNameExt"
 
         # Move files to "old" directory if specified
         if ($Move) {
@@ -236,7 +231,7 @@ function MRNAP {
                 $items = Get-ChildItem -Path $DirectoryName -Filter $ReportNameExt -File -ErrorAction Stop -Force
 
                 if ($items.count -gt 0) {
-                    $oldDirectory = Join-AnyPath $DirectoryName "old"
+                    $oldDirectory = Join-Path $DirectoryName "old"
 
                     if (-not (Test-Path $oldDirectory)) {
                         try {
