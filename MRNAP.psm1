@@ -57,6 +57,15 @@
     <ReportName>.<Extension> to an 'old' subdirectory. Creates the destination and 'old'
     directories if they do not exist. Accepts pipeline input by property name (M).
 
+.PARAMETER FlatName
+    Return just the file name with no directory path and no timestamp.
+    By default the extension is included (e.g. "Tom.csv"). Combine with -NoExtension to get a
+    bare name (e.g. "Tom"). Accepts pipeline input by property name (FL).
+
+.PARAMETER NoExtension
+    Omit the file extension from the output. Most useful with -FlatName to produce a bare name
+    like "Tom". Accepts pipeline input by property name (NE).
+
 .LINK
     https://github.com/dcazman/MRNAP
 
@@ -129,7 +138,13 @@ function MRNAP {
         [Alias("JD")][switch]$JustDate,
 
         [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Move similar files to an 'old' directory if similar files exist.")]
-        [Alias("M")][switch]$Move
+        [Alias("M")][switch]$Move,
+
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Return just the file name with no path or timestamp.")]
+        [Alias("FL")][switch]$FlatName,
+
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Omit the file extension from the output.")]
+        [Alias("NE")][switch]$NoExtension
     )
 
     begin {
@@ -187,12 +202,17 @@ function MRNAP {
         }
 
         # Ensure the extension starts with a dot
-        if (-not $Extension.StartsWith(".")) {
+        if (-not $NoExtension -and -not $Extension.StartsWith(".")) {
             $Extension = ".$Extension"
         }
 
         # Build the basic report name with extension
-        $ReportNameExt = "$ReportName$Extension"
+        $ReportNameExt = if ($NoExtension) { $ReportName } else { "$ReportName$Extension" }
+
+        # Short-circuit for flat name: return just the filename with no path or timestamp
+        if ($FlatName) {
+            return [string]$ReportNameExt
+        }
 
         # Format the timestamp based on the specified options
         if (-not $NoDateTimeSeconds) {
@@ -201,11 +221,11 @@ function MRNAP {
             if ($AddTime) {
                 $timestampFormat = "yyyy_MM_ddTHHmmss-"
             }
-            elseif ($NoSeconds) {
-                $timestampFormat = "yyyy_MM_ddTHHmm-"
-            }
             elseif ($JustDate) {
                 $timestampFormat = "yyyy_MM_dd"
+            }
+            elseif ($NoSeconds) {
+                $timestampFormat = "yyyy_MM_ddTHHmm-"
             }
 
             if ($UTC) {
@@ -214,7 +234,8 @@ function MRNAP {
                     $timestamp = (Get-Date).ToUniversalTime().ToString($timestampFormat)  # Only date in UTC
                 }
                 elseif ($NoDate) {
-                    $timestamp = (Get-Date).ToUniversalTime().ToString("HHmmss-")  # Only time in UTC, no date
+                    $fmt = if ($NoSeconds) { "HHmm-" } else { "HHmmss-" }
+                    $timestamp = (Get-Date).ToUniversalTime().ToString($fmt)  # Only time in UTC, no date
                 }
                 else {
                     $timestampFormat = "yyyy_MM_ddTHHmmss-"
@@ -227,7 +248,8 @@ function MRNAP {
             else {
                 # Handle local time formatting
                 if ($NoDate) {
-                    $timestamp = (Get-Date).ToString("HHmmss-")  # Local time with no date
+                    $fmt = if ($NoSeconds) { "HHmm-" } else { "HHmmss-" }
+                    $timestamp = (Get-Date).ToString($fmt)  # Local time with no date
                 }
                 elseif ($JustDate) {
                     $timestamp = (Get-Date).ToString($timestampFormat)
@@ -257,7 +279,13 @@ function MRNAP {
                 }
             }
             Else {
-                $items = Get-ChildItem -Path $DirectoryName -Filter $ReportNameExt -File -ErrorAction Stop -Force
+                $items = @()
+                try {
+                    $items = Get-ChildItem -Path $DirectoryName -Filter $ReportNameExt -File -ErrorAction Stop -Force
+                }
+                catch {
+                    Write-Warning "Unable to list files in $DirectoryName."
+                }
 
                 if ($items.count -gt 0) {
                     $oldDirectory = Join-Path $DirectoryName "old"
