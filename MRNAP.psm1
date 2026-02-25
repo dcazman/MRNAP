@@ -1,140 +1,170 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
     Generates a report file name and path with various customizable options.
 
 .DESCRIPTION
-    This script generates a report file name and path based on the provided parameters. It supports options for specifying the report name, directory, file extension, timestamp format, and more. The script can also move existing similar files to an 'old' directory if specified.
+    Generates a timestamped report file name and full path. Accepts pipeline input by value
+    (a bare string becomes ReportName) and by property name (pipe any object whose properties
+    match parameter names). Supports custom directory, extension, UTC or local time, date-only,
+    time-only, no-separator mode, and automatic archival of existing files to an 'old'
+    subdirectory. Works on Windows, Linux, and macOS with PowerShell 5.1 and 7+.
 
 .PARAMETER ReportName
-    The name of the report. If not specified, a random word or script name will be used. Alias: RN.
+    The base name of the report file. Accepts pipeline input by value and by property name (RN).
+    If omitted, the calling script's filename (without extension) is used; falls back to a
+    random word when running interactively.
 
 .PARAMETER DirectoryName
-    The destination directory where the report file will be stored. Default is the user's home directory. Alias DN.
+    Destination directory for the report file. Accepts pipeline input by property name (DN).
+    Defaults to ~/Reports ($HOME/Reports). If a relative path is supplied, a leading path
+    separator is prepended to root it.
 
 .PARAMETER Extension
-    The file extension for the report file. The default value is 'csv'. Alias: EXT, E.
+    File extension for the report. Accepts pipeline input by property name (EXT, E). Default: csv.
+    A leading dot is added automatically if omitted.
 
 .PARAMETER NoDateTimeSeconds
-    Exclude the timestamp in the file name. Alias: NODTS, N.
+    Omit the timestamp entirely — only the report name and extension are used.
+    Accepts pipeline input by property name (NODTS, N).
 
 .PARAMETER UTC
-    Use Coordinated Universal Time (UTC) for the timestamp in the file name.
+    Use UTC instead of local time for the timestamp. Also forces the full datetime format
+    (yyyy_MM_ddTHHmmss-). Accepts pipeline input by property name.
 
 .PARAMETER NoSeparators
-    Do not use separators (underscores and dashes) in the timestamp. Alias: NoSep, NX
+    Remove underscores and dashes from the timestamp portion of the filename.
+    Accepts pipeline input by property name (NoSep, NX).
 
 .PARAMETER NoSeconds
-    Exclude seconds from the timestamp. Alias: NoSec, NS.
+    Include time in the timestamp but omit seconds (HHmm instead of HHmmss).
+    Accepts pipeline input by property name (NoSec, NS).
 
 .PARAMETER AddTime
-    Include time in the timestamp. Alias: AT.
+    Include full date and time (yyyy_MM_ddTHHmmss-) in the timestamp.
+    Accepts pipeline input by property name (AT).
 
 .PARAMETER NoDate
-    Exclude the date in the file name. Alias ND.
+    Use only the time component (HHmmss-) — no date in the filename.
+    Accepts pipeline input by property name (ND).
 
 .PARAMETER JustDate
-    Include only the date in the file name. No filename or words just the date. Alias JD.
+    Use only the date (yyyy_MM_dd) with no report name.
+    Accepts pipeline input by property name (JD).
 
 .PARAMETER Move
-    Move files to an 'old' directory if files exist in destination directory. Alias M.
+    Before returning the path, move any file in the destination directory that exactly matches
+    <ReportName>.<Extension> to an 'old' subdirectory. Creates the destination and 'old'
+    directories if they do not exist. Accepts pipeline input by property name (M).
 
 .LINK
     https://github.com/dcazman/MRNAP
 
 .EXAMPLE
-    MRNAP -ReportName "SalesReport" -DirectoryName "C:\Apple" -Extension "txt" -UTC -Move
+    MRNAP -ReportName "SalesReport" -DirectoryName "/tmp/Apple" -Extension "txt" -UTC -Move
     Generates a report file name and path with the specified options and moves existing files to an 'old' directory.
-    Result C:\Apple\2025_01_01-SalesReport.txt
+    Result: /tmp/Apple/2025_01_15T213022-SalesReport.txt
 
 .EXAMPLE
     MRNAP -ReportName "MonthlyReport" -UTC -NoSeparators
     Generates a file path with name "MonthlyReport" using UTC time and without separators.
-    Result: C:\Users\<UN>\Reports\2025_01_01T120000MonthlyReport.csv
+    Result: ~/Reports/20250115T213022MonthlyReport.csv
 
 .EXAMPLE
     MRNAP -NoDateTimeSeconds
-    Generates a filename and file path with no timestamp
-    Result: C:\Users\<UN>\Reports\<ScriptName>.csv
-    or 
-    Result: C:\Users\<UN>\Reports\<RandomWord>.csv
+    Generates a filename and file path with no timestamp.
+    Result: ~/Reports/<ScriptName>.csv
+    or
+    Result: ~/Reports/<RandomWord>.csv
 
 .EXAMPLE
-    $output | MRNAP
-    Generates a filename and file path.
-    Result: C:\Users\<UN>\Reports\2025_01_01-<ScriptName>.csv
-    or 
-    Result: C:\Users\<UN>\Reports\2025_01_01-<RandomWord>.csv
+    'DailyReport' | MRNAP -DirectoryName '~/Reports'
+    Pipes a string directly as the report name.
+    Result: ~/Reports/2025_01_15-DailyReport.csv
+
+.EXAMPLE
+    [PSCustomObject]@{ ReportName = "Sales"; DirectoryName = "/tmp/reports" } | MRNAP
+    Pipes an object with named properties to generate a report path.
+    Result: /tmp/reports/2025_01_15-Sales.csv
 
 .NOTES
     Author: Dan Casmas
-    Version: 9.5
-    Date: 1/2025
-    Designed to work on Windows, Linux, and macOS. Tested with PowerShell 5.1 and 7.
+    Version: 10.0
+    Date: 2/2026
+    Designed to work on Windows, Linux, and macOS. Tested with PowerShell 5.1 and 7+.
 #>
 function MRNAP {
     [Alias("MoldReportNameAndPath")]
-    #Requires -Version 5.1
     [CmdletBinding()]
+    [OutputType([string])]
     param (
-        [parameter(Position = 0, Mandatory = $False, ValueFromPipeline = $True, HelpMessage = "The name of the report. If not specified, a random word or script name will be used.")]
+        [parameter(Position = 0, Mandatory = $False, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, HelpMessage = "The name of the report. If not specified, a random word or script name will be used.")]
         [Alias("RN")][string]$ReportName,
 
-        [parameter(Position = 1, Mandatory = $False, HelpMessage = "The destination directory where the report file will be stored. Default is the user's home directory.")]
+        [parameter(Position = 1, Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "The destination directory where the report file will be stored. Default is the user's home directory.")]
         [Alias("DN")][string]$DirectoryName,
 
-        [parameter(Position = 2, Mandatory = $False, HelpMessage = "The file extension for the report file. The default value is 'csv'.")]
+        [parameter(Position = 2, Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "The file extension for the report file. The default value is 'csv'.")]
         [Alias("EXT", "E")][string]$Extension = "csv",
 
-        [parameter(Mandatory = $False, HelpMessage = "Exclude the timestamp in the file name.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Exclude the timestamp in the file name.")]
         [Alias("NODTS", "N")][switch]$NoDateTimeSeconds,
 
-        [parameter(Mandatory = $False, HelpMessage = "Use Coordinated Universal Time (UTC) for the timestamp in the file name.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Use Coordinated Universal Time (UTC) for the timestamp in the file name.")]
         [switch]$UTC,
 
-        [parameter(Mandatory = $False, HelpMessage = "Do not use separators (underscores and dashes).")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Do not use separators (underscores and dashes).")]
         [Alias("NoSep", "NX")][switch]$NoSeparators,
 
-        [parameter(Mandatory = $False, HelpMessage = "Exclude seconds from the timestamp.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Exclude seconds from the timestamp.")]
         [Alias("NoSec", "NS")][switch]$NoSeconds,
 
-        [parameter(Mandatory = $False, HelpMessage = "Include time in the timestamp.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Include time in the timestamp.")]
         [Alias("AT")][switch]$AddTime,
 
-        [parameter(Mandatory = $False, HelpMessage = "Exclude the date in the file name.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Exclude the date in the file name.")]
         [Alias("ND")][switch]$NoDate,
 
-        [parameter(Mandatory = $False, HelpMessage = "Only the date in file name.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Only the date in file name.")]
         [Alias("JD")][switch]$JustDate,
 
-        [parameter(Mandatory = $False, HelpMessage = "Move similar files to an 'old' directory if similar files exist.")]
+        [parameter(Mandatory = $False, ValueFromPipelineByPropertyName = $True, HelpMessage = "Move similar files to an 'old' directory if similar files exist.")]
         [Alias("M")][switch]$Move
     )
 
-    process {
+    begin {
+        # Helper functions are defined once here so they are not redefined on every pipeline input.
+
         function GetScriptName {
             Try {
                 $callStack = Get-PSCallStack
-                if ($callStack.Location -eq "<No file>") {
-                    return $null  # Running interactively, return nothing
+                $modulePath = $callStack[0].ScriptName  # path to MRNAP.psm1
+                foreach ($frame in $callStack) {
+                    if ([string]::IsNullOrWhiteSpace($frame.ScriptName)) { continue }
+                    if ($frame.ScriptName -eq $modulePath) { continue }
+                    return [IO.Path]::GetFileNameWithoutExtension((Split-Path $frame.ScriptName -Leaf))
                 }
-                return $callStack[2].Location  # Get the outermost script location
+                return $null  # No script frame found — running interactively
             }
             catch {
                 return $null
             }
         }
 
-        # Function to get a random word
         function GetRandomWord {
             $Words = @(
-                'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Echo', 'Ethan', 
-                'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet', 'Kathie', 'Kilo', 
-                'Lima', 'Mat', 'November', 'Oscar', 'Phil', 'Quebec', 'Romeo', 
-                'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo', 
+                'Alpha', 'Ace', 'Bravo', 'Cat', 'Dan', 'Delta', 'Echo', 'Ethan',
+                'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliet', 'Kathie', 'Kilo',
+                'Lima', 'Mat', 'November', 'Oscar', 'Phil', 'Quebec', 'Romeo',
+                'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yoyo',
                 'Zachary', 'Zulu'
             )
             return Get-Random -InputObject $Words
         }
+    }
+
+    process {
+        $timestamp = ""
 
         # Set default report name if not provided
         if ([string]::IsNullOrWhiteSpace($ReportName) -and (-not $JustDate -or ($JustDate -and $NoDateTimeSeconds))) {
@@ -143,7 +173,7 @@ function MRNAP {
                 $ReportName = GetRandomWord
             }
             else {
-                $ReportName = $ScriptName -replace '\.[^.]+$', ''
+                $ReportName = $ScriptName
             }
         }
 
@@ -151,10 +181,9 @@ function MRNAP {
         if ([string]::IsNullOrWhiteSpace($DirectoryName)) {
             $DirectoryName = [IO.Path]::Combine($HOME, "Reports")
         }
-        elseif (-not $DirectoryName.Contains(":")) {
-            if (-not $DirectoryName.StartsWith([IO.Path]::DirectorySeparatorChar)) {
-                $DirectoryName = [IO.Path]::DirectorySeparatorChar + $DirectoryName
-            }
+        elseif (-not [IO.Path]::IsPathRooted($DirectoryName)) {
+            # Relative path supplied — root it with the platform separator (\ on Windows, / on Linux/macOS)
+            $DirectoryName = [IO.Path]::DirectorySeparatorChar + $DirectoryName
         }
 
         # Ensure the extension starts with a dot
