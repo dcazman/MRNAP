@@ -10,7 +10,7 @@
     RootModule        = 'MRNAP.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '10.0'
+    ModuleVersion     = '10.1'
 
     # Unique identifier for this module.
     GUID              = 'ef2729bf-1767-40ff-93a8-9700d5208043'
@@ -61,3 +61,4 @@
         }
     }
 }
+
