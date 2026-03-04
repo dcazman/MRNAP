@@ -29,3 +29,11 @@ jobs:
           else
             gh release create "$TAG" --title "$TAG" --generate-notes
           fi
+
+      - name: Upload module as release asset
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          zip -j MRNAP-${TAG}.zip MRNAP.psm1 MRNAP.psd1 README.md LICENSE
+          gh release upload "$TAG" MRNAP-${TAG}.zip --clobber
