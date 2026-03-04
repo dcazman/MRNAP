@@ -37,3 +37,41 @@ jobs:
           TAG="v${{ steps.version.outputs.version }}"
           zip -j MRNAP-${TAG}.zip MRNAP.psm1 MRNAP.psd1 README.md LICENSE
           gh release upload "$TAG" MRNAP-${TAG}.zip --clobber
+
+      - name: Publish to GitHub Packages (NuGet)
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+
+          # Install NuGet CLI
+          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile nuget.exe
+
+          # Create a minimal nuspec
+          $nuspec = @"
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>MRNAP</id>
+    <version>$version</version>
+    <authors>Dan Casmas</authors>
+    <description>Generates a timestamped report file name and full path. Works on Windows, Linux, and macOS with PowerShell 5.1 and 7+.</description>
+    <projectUrl>https://github.com/dcazman/MRNAP</projectUrl>
+    <licenseUrl>https://github.com/dcazman/MRNAP/blob/main/LICENSE</licenseUrl>
+    <tags>PowerShell Report Filename Timestamp CrossPlatform</tags>
+  </metadata>
+  <files>
+    <file src="MRNAP.psm1" target="" />
+    <file src="MRNAP.psd1" target="" />
+    <file src="README.md" target="" />
+  </files>
+</package>
+"@
+          $nuspec | Out-File -FilePath MRNAP.nuspec -Encoding utf8
+
+          # Pack
+          ./nuget.exe pack MRNAP.nuspec
+
+          # Push to GitHub Packages
+          dotnet nuget push "MRNAP.$version.nupkg" `
+            --source "https://nuget.pkg.github.com/dcazman/index.json" `
+            --api-key ${{ secrets.GITHUB_TOKEN }}
