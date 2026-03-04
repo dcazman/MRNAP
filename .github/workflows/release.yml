@@ -39,39 +39,36 @@ jobs:
           gh release upload "$TAG" MRNAP-${TAG}.zip --clobber
 
       - name: Publish to GitHub Packages (NuGet)
-        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = "${{ steps.version.outputs.version }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
-          # Install NuGet CLI
-          Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile nuget.exe
+          # Write nuspec file
+          cat > MRNAP.nuspec << NUSPEC
+          <?xml version="1.0"?>
+          <package>
+            <metadata>
+              <id>MRNAP</id>
+              <version>${VERSION}</version>
+              <authors>Dan Casmas</authors>
+              <description>Generates a timestamped report file name and full path. Works on Windows, Linux, and macOS with PowerShell 5.1 and 7+.</description>
+              <projectUrl>https://github.com/dcazman/MRNAP</projectUrl>
+              <tags>PowerShell Report Filename Timestamp CrossPlatform</tags>
+            </metadata>
+            <files>
+              <file src="MRNAP.psm1" target="" />
+              <file src="MRNAP.psd1" target="" />
+              <file src="README.md" target="" />
+            </files>
+          </package>
+          NUSPEC
 
-          # Create a minimal nuspec
-          $nuspec = @"
-<?xml version="1.0"?>
-<package>
-  <metadata>
-    <id>MRNAP</id>
-    <version>$version</version>
-    <authors>Dan Casmas</authors>
-    <description>Generates a timestamped report file name and full path. Works on Windows, Linux, and macOS with PowerShell 5.1 and 7+.</description>
-    <projectUrl>https://github.com/dcazman/MRNAP</projectUrl>
-    <licenseUrl>https://github.com/dcazman/MRNAP/blob/main/LICENSE</licenseUrl>
-    <tags>PowerShell Report Filename Timestamp CrossPlatform</tags>
-  </metadata>
-  <files>
-    <file src="MRNAP.psm1" target="" />
-    <file src="MRNAP.psd1" target="" />
-    <file src="README.md" target="" />
-  </files>
-</package>
-"@
-          $nuspec | Out-File -FilePath MRNAP.nuspec -Encoding utf8
-
-          # Pack
-          ./nuget.exe pack MRNAP.nuspec
+          # Install nuget CLI and pack
+          wget -q https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+          mono nuget.exe pack MRNAP.nuspec
 
           # Push to GitHub Packages
-          dotnet nuget push "MRNAP.$version.nupkg" `
-            --source "https://nuget.pkg.github.com/dcazman/index.json" `
-            --api-key ${{ secrets.GITHUB_TOKEN }}
+          dotnet nuget push "MRNAP.${VERSION}.nupkg" \
+            --source "https://nuget.pkg.github.com/dcazman/index.json" \
+            --api-key "${GITHUB_TOKEN}"
