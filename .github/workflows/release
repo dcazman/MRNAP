@@ -1,0 +1,31 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: version
+        shell: pwsh
+        run: |
+          $manifest = Import-PowerShellDataFile ./MRNAP.psd1
+          echo "version=$($manifest.ModuleVersion)" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping."
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes
+          fi
