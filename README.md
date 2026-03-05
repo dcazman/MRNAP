@@ -24,10 +24,10 @@ and automatic archival of existing files. Accepts pipeline input by value and by
 
 ## Requirements
 
-| Environment  | Requirement     |
-|--------------|-----------------|
-| Windows      | PowerShell 5.1+ |
-| Linux / macOS | PowerShell 7+  |
+| Environment   | Requirement     |
+|---------------|-----------------|
+| Windows       | PowerShell 5.1+ |
+| Linux / macOS | PowerShell 7+   |
 
 No external dependencies. Uses only built-in PowerShell cmdlets.
 
@@ -106,10 +106,10 @@ MRNAP -ReportName 'SalesReport'
 # Result: ~/Reports/2025_01_15-SalesReport.csv
 ```
 
-#### Custom directory and extension, move old file, UTC
+#### Custom directory and extension, move old file, UTC datetime
 
 ```powershell
-MRNAP -ReportName 'SalesReport' -DirectoryName '/srv/data' -Extension 'txt' -UTC -Move
+MRNAP -ReportName 'SalesReport' -DirectoryName '/srv/data' -Extension 'txt' -TimestampFormat DateTime -UTC -Move
 # Result: /srv/data/2025_01_15T213022-SalesReport.txt
 # (any existing /srv/data/SalesReport.txt is moved to /srv/data/old/)
 ```
@@ -136,10 +136,10 @@ MRNAP -ReportName 'Audit' -DirectoryName '~/Logs' -TimestampFormat DateTimeNoSec
 # Result: ~/Logs/2025_01_15T1430-Audit.csv
 ```
 
-#### No separators (compact format)
+#### No separators (compact format), UTC
 
 ```powershell
-MRNAP -ReportName 'MonthlyReport' -UTC -NoSeparators
+MRNAP -ReportName 'MonthlyReport' -TimestampFormat DateTime -UTC -NoSeparators
 # Result: ~/Reports/20250115T213022MonthlyReport.csv
 ```
 
@@ -163,6 +163,16 @@ MRNAP -DirectoryName '~/Archive' -TimestampFormat JustDate
 MRNAP -TimestampFormat None
 # Result: ~/Reports/<ScriptName>.csv
 #     or: ~/Reports/<RandomWord>.csv  (when run interactively)
+```
+
+#### Flat name — file name only, no path, no timestamp
+
+```powershell
+MRNAP -ReportName 'Tom' -FlatName
+# Result: Tom.csv
+
+MRNAP -ReportName 'Tom' -FlatName -NoExtension
+# Result: Tom
 ```
 
 #### Pipeline — pipe a string directly as the report name
