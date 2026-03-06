@@ -1,6 +1,6 @@
 # MRNAP — Mold Report Name And Path
 
-[![PSGallery Version](https://img.shields.io/powershellgallery/v/MRNAP)](https://www.powershellgallery.com/packages/MRNAP)
+[![PSGallery Version](https://img.shields.io/powershellgallery/v/MRNAP)](https://www.powershellgallery.com/packages/MRNAP/11.0)
 [![PSGallery Downloads](https://img.shields.io/powershellgallery/dt/MRNAP)](https://www.powershellgallery.com/packages/MRNAP)
 
 Generates a timestamped report file name and full path with flexible formatting options.
