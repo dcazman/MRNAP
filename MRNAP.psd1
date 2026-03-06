@@ -34,6 +34,7 @@
                 'Report', 'Filename', 'Path', 'Timestamp', 'CSV', 'Automation',
                 'Utility', 'CrossPlatform', 'FileManagement', 'Naming', 'Logging'
             )
+            Unlisted = $true
             # URL to the license for this module.
             LicenseUri   = 'https://github.com/dcazman/MRNAP/blob/main/LICENSE'
             # URL to the main website for this project.
