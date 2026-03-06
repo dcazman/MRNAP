@@ -1,5 +1,8 @@
 name: Publish to PowerShell Gallery
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:
